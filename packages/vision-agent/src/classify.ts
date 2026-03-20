@@ -8,6 +8,73 @@ import { CLASSIFICATION_SYSTEM_PROMPT } from "./prompt.js";
 // ensure env is imported so dotenv runs and OPENAI_API_KEY is present
 void env;
 
+const INAT_BASE_URL = "https://api.inaturalist.org/v1";
+const CIVIC_TIMEOUT_MS = 3000;
+
+interface InatTaxon {
+  id: number;
+  name: string;
+  matched_term?: string;
+}
+
+interface InatTaxaResponse {
+  results: InatTaxon[];
+}
+
+async function fetchINatTaxon(speciesName: string): Promise<string | null> {
+  if (!speciesName || speciesName === "unknown") return null;
+  try {
+    const params = new URLSearchParams({ q: speciesName, per_page: "1" });
+    const response = await fetch(`${INAT_BASE_URL}/taxa?${params}`);
+    if (!response.ok) {
+      console.warn(
+        `[vision-agent] iNaturalist taxa lookup returned ${response.status} for "${speciesName}"`
+      );
+      return null;
+    }
+    const body = (await response.json()) as InatTaxaResponse;
+    const taxon = body.results[0];
+    if (!taxon) return null;
+    return String(taxon.id);
+  } catch (err) {
+    console.warn(`[vision-agent] iNaturalist taxa lookup failed for "${speciesName}":`, err);
+    return null;
+  }
+}
+
+async function inspectOutput(payload: ClassifiedSighting): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `http://localhost:${env.MCP_PORT}/tools/call`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "inspect_output",
+            arguments: { payload: JSON.stringify(payload) },
+          },
+        }),
+        signal: AbortSignal.timeout(CIVIC_TIMEOUT_MS),
+      }
+    );
+    if (!response.ok) return false;
+    const result = (await response.json()) as {
+      result?: { blocked?: boolean };
+    };
+    return result.result?.blocked === true;
+  } catch {
+    // civic-mcp server unavailable — allow through and log
+    console.warn(
+      "[vision-agent] civic-mcp inspect_output unavailable; proceeding without guardrail"
+    );
+    return false;
+  }
+}
+
 const classificationSchema = z.object({
   species: z.string(),
   confidence: z.number().min(0).max(1),
@@ -31,16 +98,27 @@ export async function classifySighting(
       ],
     });
 
-    return {
+    const isUnknown = !object.species || object.species === "unknown";
+    const needsReview = isUnknown || object.confidence < 0.6;
+    const taxonId = needsReview ? null : await fetchINatTaxon(object.species);
+
+    const result: ClassifiedSighting = {
       ...sighting,
       species: object.species,
       confidence: object.confidence,
       invasive: object.invasive,
-      taxonId: null,
-      needsReview: false,
+      taxonId,
+      needsReview,
     };
+
+    const blocked = await inspectOutput(result);
+    if (blocked) {
+      return { ...result, needsReview: true };
+    }
+
+    return result;
   } catch {
-    return {
+    const fallback: ClassifiedSighting = {
       ...sighting,
       species: "unknown",
       confidence: 0,
@@ -48,5 +126,9 @@ export async function classifySighting(
       taxonId: null,
       needsReview: true,
     };
+
+    await inspectOutput(fallback);
+
+    return fallback;
   }
 }
