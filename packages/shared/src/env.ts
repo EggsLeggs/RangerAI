@@ -5,37 +5,34 @@ config();
 const DEFAULT_MCP_PORT = 3001;
 const DEFAULT_WEBHOOK_URL = "http://localhost:3000/api/alerts";
 
-type RequiredEnvKey =
-  | "GBIF_TOKEN"
-  | "IUCN_TOKEN"
-  | "OPENAI_API_KEY"
-  | "CIVIC_API_KEY";
-
-type OptionalEnvKey =
-  | "INATURALIST_API_KEY"
-  | "TWILIO_ACCOUNT_SID"
-  | "TWILIO_AUTH_TOKEN"
-  | "TWILIO_FROM_NUMBER"
-  | "TWILIO_TO_NUMBER";
-
-const REQUIRED_ENV_KEYS: readonly RequiredEnvKey[] = [
+const REQUIRED_ENV_KEYS = [
   "GBIF_TOKEN",
   "IUCN_TOKEN",
   "OPENAI_API_KEY",
   "CIVIC_API_KEY"
-];
+] as const;
 
-const OPTIONAL_ENV_KEYS: readonly OptionalEnvKey[] = [
+const OPTIONAL_ENV_KEYS = [
   "INATURALIST_API_KEY",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM_NUMBER",
   "TWILIO_TO_NUMBER"
-];
+] as const;
+
+type RequiredEnvKey = (typeof REQUIRED_ENV_KEYS)[number];
+type OptionalEnvKey = (typeof OPTIONAL_ENV_KEYS)[number];
 
 function readRequiredEnv(key: RequiredEnvKey): string {
   const value = process.env[key]?.trim();
-  return value ?? "";
+  if (!value) {
+    throw new Error(
+      `missing required environment variable: ${key}. ` +
+        "set it in your local .env file before starting RangerWatch."
+    );
+  }
+
+  return value;
 }
 
 function readOptionalEnv(key: OptionalEnvKey): string | undefined {
@@ -81,7 +78,7 @@ function readWebhookUrl(value: string | undefined): string {
 }
 
 export function validateRequiredEnv(): void {
-  const missing = REQUIRED_ENV_KEYS.filter((key) => !readRequiredEnv(key));
+  const missing = REQUIRED_ENV_KEYS.filter((key) => !process.env[key]?.trim());
   if (missing.length > 0) {
     throw new Error(
       `missing required environment variables: ${missing.join(", ")}. ` +
