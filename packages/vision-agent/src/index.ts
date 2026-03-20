@@ -1,1 +1,1 @@
-export { classifySighting } from "./classify.js";
+export { processSighting } from "./pipeline.js";
