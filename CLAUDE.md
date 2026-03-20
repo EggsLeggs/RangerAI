@@ -46,7 +46,7 @@ GBIF API ─────────┘                        │              
 - **civic**: calls `inspect_output` on civic-mcp server before passing result downstream
 
 ### threat detection agent
-- looks up species conservation status via IUCN Red List API (`/api/v3/species/`)
+- looks up species conservation status via IUCN Red List API v4 (`/api/v4/taxa/scientific_name`, then `/api/v4/assessment/{id}` for category and range)
 - validates sighting location against expected species range (IUCN polygons or bounding boxes)
 - scores each sighting 0–100 based on out-of-range, nocturnal timing, human clustering near endangered species, and invasive species first appearance
 - classifies severity as `CRITICAL` (score ≥80 or CR/EN species out of range), `WARNING` (50–79 or invasive), or `INFO`
@@ -67,7 +67,7 @@ GBIF API ─────────┘                        │              
 |---|---|---|
 | iNaturalist | `https://api.inaturalist.org/v1` | research-grade observations with photos |
 | GBIF | `https://api.gbif.org/v1` | occurrence records by bounding box |
-| IUCN Red List | `https://apiv3.iucnredlist.org/api/v3` | conservation status + range data |
+| IUCN Red List | `https://api.iucnredlist.org/api/v4` | conservation status + range data |
 | Twilio | SMS API | critical alert dispatch |
 
 ---
