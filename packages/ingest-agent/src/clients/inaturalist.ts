@@ -41,13 +41,17 @@ function mapObservationToSighting(obs: InatObservation): Sighting | null {
   const coords = parseLocation(obs.location);
   if (!coords) return null;
 
+  const rawDate = obs.time_observed_at ?? obs.created_at;
+  const parsedDate = new Date(rawDate);
+  if (isNaN(parsedDate.getTime())) return null;
+
   const sighting: Sighting = {
     id: `inaturalist:${obs.id}`,
     source: "inaturalist",
     imageUrl: obs.photos[0].url,
     lat: coords.lat,
     lng: coords.lng,
-    observedAt: new Date(obs.time_observed_at ?? obs.created_at),
+    observedAt: parsedDate,
   };
 
   if (obs.description) {
@@ -65,7 +69,7 @@ export async function fetchObservations(boundingBox: BoundingBox): Promise<Sight
   }
 
   const headers: Record<string, string> = env.INATURALIST_API_KEY
-    ? { Authorization: env.INATURALIST_API_KEY }
+    ? { Authorization: `Bearer ${env.INATURALIST_API_KEY}` }
     : {};
 
   const sightings: Sighting[] = [];
