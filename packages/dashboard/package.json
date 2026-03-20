@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "app/page.tsx",
   "scripts": {
     "dev": "next dev --port 3000 --hostname 127.0.0.1",
     "lint": "eslint .",

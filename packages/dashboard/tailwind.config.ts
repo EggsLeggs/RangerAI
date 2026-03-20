@@ -4,6 +4,9 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        display: ["var(--font-display)", "serif"]
+      },
       colors: {
         forest: "#1a3a2a",
         moss: "#2d5a3d",
