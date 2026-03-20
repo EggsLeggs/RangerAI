@@ -4,43 +4,12 @@ import { z } from "zod";
 import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
 import { env } from "@rangerwatch/shared/env";
 import { CLASSIFICATION_SYSTEM_PROMPT } from "./prompt.js";
+import { attachTaxon } from "./taxonomy.js";
 
 // ensure env is imported so dotenv runs and OPENAI_API_KEY is present
 void env;
 
-const INAT_BASE_URL = "https://api.inaturalist.org/v1";
 const CIVIC_TIMEOUT_MS = 3000;
-
-interface InatTaxon {
-  id: number;
-  name: string;
-  matched_term?: string;
-}
-
-interface InatTaxaResponse {
-  results: InatTaxon[];
-}
-
-async function fetchINatTaxon(speciesName: string): Promise<string | null> {
-  if (!speciesName || speciesName === "unknown") return null;
-  try {
-    const params = new URLSearchParams({ q: speciesName, per_page: "1" });
-    const response = await fetch(`${INAT_BASE_URL}/taxa?${params}`);
-    if (!response.ok) {
-      console.warn(
-        `[vision-agent] iNaturalist taxa lookup returned ${response.status} for "${speciesName}"`
-      );
-      return null;
-    }
-    const body = (await response.json()) as InatTaxaResponse;
-    const taxon = body.results[0];
-    if (!taxon) return null;
-    return String(taxon.id);
-  } catch (err) {
-    console.warn(`[vision-agent] iNaturalist taxa lookup failed for "${speciesName}":`, err);
-    return null;
-  }
-}
 
 async function inspectOutput(payload: ClassifiedSighting): Promise<boolean> {
   try {
@@ -100,16 +69,17 @@ export async function classifySighting(
 
     const isUnknown = !object.species || object.species === "unknown";
     const needsReview = isUnknown || object.confidence < 0.6;
-    const taxonId = needsReview ? null : await fetchINatTaxon(object.species);
 
-    const result: ClassifiedSighting = {
+    const base: ClassifiedSighting = {
       ...sighting,
       species: object.species,
       confidence: object.confidence,
       invasive: object.invasive,
-      taxonId,
+      taxonId: null,
       needsReview,
     };
+
+    const result = needsReview ? base : await attachTaxon(base);
 
     const blocked = await inspectOutput(result);
     if (blocked) {
