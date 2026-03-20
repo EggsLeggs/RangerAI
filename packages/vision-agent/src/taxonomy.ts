@@ -64,9 +64,7 @@ export async function lookupTaxon(speciesName: string): Promise<string | null> {
     return result;
   } catch (err) {
     clearTimeout(timer);
-    const isAbort =
-      err instanceof Error &&
-      (err.name === "AbortError" || err.name === "TimeoutError");
+    const isAbort = err instanceof Error && err.name === "AbortError";
     console.warn(
       isAbort
         ? `[vision-agent] iNaturalist taxa lookup timed out for "${speciesName}"`
@@ -82,6 +80,8 @@ export async function attachTaxon(
   classified: ClassifiedSighting
 ): Promise<ClassifiedSighting> {
   const taxonId = await lookupTaxon(classified.species);
+  // a null taxonId means iNaturalist could not confirm the species, so flag for manual review
+  // even if the vision model was confident
   const needsReview = classified.needsReview || taxonId === null;
   return { ...classified, taxonId, needsReview };
 }
