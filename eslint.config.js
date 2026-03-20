@@ -9,9 +9,10 @@ export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       globals: {
+        ...globals.browser,
         ...globals.node
       }
     },

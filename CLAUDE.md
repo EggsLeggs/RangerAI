@@ -21,7 +21,7 @@ the project is being built for the **AI London hackathon**, entering four tracks
 
 four agents run in sequence, connected by an event bus. all guardrail calls go via the civic-mcp server:
 
-```
+```text
 iNaturalist API ──┐
                   ├── ingest agent ──► vision agent ──► threat agent ──► alert agent
 GBIF API ─────────┘                        │                  │               │
@@ -90,7 +90,7 @@ AgentEvent       // type, payload, timestamp — used on the event bus
 
 ## repo structure
 
-```
+```text
 RangerWatch/
 ├── packages/
 │   ├── shared/          # types, constants, event bus
@@ -167,7 +167,7 @@ instead of calling the Civic SDK directly from each agent, we expose Civic as a 
 
 the server exposes three tools:
 
-```
+```text
 inspect_input(payload: string)   — check incoming data before an agent processes it
 inspect_output(payload: string)  — check outgoing data before it passes downstream
 audit_log()                      — return session audit: calls made, blocks triggered
