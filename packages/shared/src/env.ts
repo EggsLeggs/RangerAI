@@ -54,9 +54,9 @@ function readPort(value: string | undefined): number {
   }
 
   const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
     throw new Error(
-      `invalid MCP_PORT "${raw}". expected a positive integer.`
+      `invalid MCP_PORT "${raw}". expected an integer in range 1-65535.`
     );
   }
 
@@ -71,13 +71,16 @@ function readWebhookUrl(value: string | undefined): string {
 
   try {
     const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error();
+    }
     return parsed.toString();
   } catch {
     throw new Error(`invalid WEBHOOK_URL "${raw}". expected a valid URL.`);
   }
 }
 
-function validateRequiredEnv(): void {
+export function validateRequiredEnv(): void {
   const missing = REQUIRED_ENV_KEYS.filter((key) => !readRequiredEnv(key));
   if (missing.length > 0) {
     throw new Error(
@@ -86,8 +89,6 @@ function validateRequiredEnv(): void {
     );
   }
 }
-
-validateRequiredEnv();
 
 export const env = {
   INATURALIST_API_KEY: readOptionalEnv("INATURALIST_API_KEY"),
