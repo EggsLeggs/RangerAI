@@ -4,7 +4,6 @@ import { z } from "zod";
 import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
 import { env } from "@rangerwatch/shared/env";
 import { CLASSIFICATION_SYSTEM_PROMPT } from "./prompt.js";
-import { attachTaxon } from "./taxonomy.js";
 
 // ensure env is imported so dotenv runs and OPENAI_API_KEY is present
 void env;
@@ -67,26 +66,21 @@ export async function classifySighting(
       ],
     });
 
-    const isUnknown = !object.species || object.species === "unknown";
-    const needsReview = isUnknown || object.confidence < 0.6;
-
     const base: ClassifiedSighting = {
       ...sighting,
       species: object.species,
       confidence: object.confidence,
       invasive: object.invasive,
       taxonId: null,
-      needsReview,
+      needsReview: false,
     };
 
-    const result = needsReview ? base : await attachTaxon(base);
-
-    const blocked = await inspectOutput(result);
+    const blocked = await inspectOutput(base);
     if (blocked) {
-      return { ...result, needsReview: true };
+      return { ...base, needsReview: true };
     }
 
-    return result;
+    return base;
   } catch {
     const fallback: ClassifiedSighting = {
       ...sighting,
@@ -94,10 +88,13 @@ export async function classifySighting(
       confidence: 0,
       invasive: false,
       taxonId: null,
-      needsReview: true,
+      needsReview: false,
     };
 
-    await inspectOutput(fallback);
+    const blocked = await inspectOutput(fallback);
+    if (blocked) {
+      fallback.needsReview = true;
+    }
 
     return fallback;
   }
