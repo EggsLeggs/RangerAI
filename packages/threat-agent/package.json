@@ -1,0 +1,20 @@
+{
+  "name": "@rangerwatch/threat-agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "build": "tsc --outDir dist",
+    "clean": "rm -rf dist"
+  }
+}
