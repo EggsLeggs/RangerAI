@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, it, expect, mock, beforeEach } from "bun:test";
 import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
 
 const baseSighting: Sighting = {
@@ -20,7 +20,7 @@ const baseClassified: ClassifiedSighting = {
 };
 
 describe("processSighting", () => {
-  it("marks low-confidence result as needsReview", async () => {
+  beforeEach(() => {
     mock.module("./classify.js", () => ({
       classifySighting: async () => ({
         ...baseClassified,
@@ -32,7 +32,9 @@ describe("processSighting", () => {
     mock.module("./taxonomy.js", () => ({
       attachTaxon: async (c: ClassifiedSighting) => ({ ...c, taxonId: "12345" }),
     }));
+  });
 
+  it("marks low-confidence result as needsReview", async () => {
     const { processSighting } = await import("./pipeline.js");
     const result = await processSighting(baseSighting);
     expect(result.needsReview).toBe(true);
@@ -76,7 +78,7 @@ describe("processSighting", () => {
     expect(result.needsReview).toBe(false);
   });
 
-  it("processSighting: classifySighting returns needsReview true with high confidence and known species, attachTaxon returns valid taxonId — applyThreshold preserves flag", async () => {
+  it("processSighting: classifySighting returns needsReview true with high confidence and known species, attachTaxon returns valid taxonId - applyThreshold preserves flag", async () => {
     mock.module("./classify.js", () => ({
       classifySighting: async () => ({
         ...baseClassified,
