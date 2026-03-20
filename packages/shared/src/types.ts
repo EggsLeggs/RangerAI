@@ -1,3 +1,11 @@
+/** Geographic bounds (north-east and south-west corners), degrees WGS84. */
+export interface BoundingBox {
+  neLat: number;
+  neLng: number;
+  swLat: number;
+  swLng: number;
+}
+
 export type SightingSource = "inaturalist" | "gbif";
 
 export interface Sighting {

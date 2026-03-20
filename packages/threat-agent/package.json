@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
+  "dependencies": {
+    "@rangerwatch/shared": "workspace:*"
+  },
   "exports": {
     ".": {
       "bun": "./src/index.ts",

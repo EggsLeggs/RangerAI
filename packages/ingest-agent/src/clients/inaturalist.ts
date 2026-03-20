@@ -1,6 +1,5 @@
-import type { Sighting } from "@rangerwatch/shared";
+import type { BoundingBox, Sighting } from "@rangerwatch/shared";
 import { env } from "@rangerwatch/shared/env";
-import type { BoundingBox } from "../types.js";
 
 const BASE_URL = "https://api.inaturalist.org/v1";
 const PER_PAGE = 200;

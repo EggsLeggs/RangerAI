@@ -40,6 +40,9 @@
     "packages/ingest-agent": {
       "name": "@rangerwatch/ingest-agent",
       "version": "0.0.0",
+      "dependencies": {
+        "@rangerwatch/shared": "workspace:*",
+      },
     },
     "packages/shared": {
       "name": "@rangerwatch/shared",
@@ -51,12 +54,16 @@
     "packages/threat-agent": {
       "name": "@rangerwatch/threat-agent",
       "version": "0.0.0",
+      "dependencies": {
+        "@rangerwatch/shared": "workspace:*",
+      },
     },
     "packages/vision-agent": {
       "name": "@rangerwatch/vision-agent",
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/openai": "^3.0.47",
+        "@rangerwatch/shared": "workspace:*",
         "ai": "^6.0.133",
         "zod": "^4.3.6",
       },
