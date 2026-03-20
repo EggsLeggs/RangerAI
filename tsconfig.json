@@ -13,6 +13,9 @@
     "paths": {
       "@rangerwatch/shared": [
         "packages/shared/src/index.ts"
+      ],
+      "@rangerwatch/shared/env": [
+        "packages/shared/src/env.ts"
       ]
     }
   },
