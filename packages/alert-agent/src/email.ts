@@ -1,12 +1,48 @@
 import { Resend } from "resend";
 import { type Alert, ThreatLevel, isAlertBoth, isAlertSms } from "@rangerai/shared";
+import { env } from "@rangerai/shared/env";
+import { buildCivicHeaders } from "@rangerai/shared";
 import { ALERT_DISPATCHED, alertEvents } from "./events.js";
+
+const CIVIC_TIMEOUT_MS = 3000;
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Returns true when the payload must be rejected (blocked by Civic). */
+async function inspectEmailPayload(alert: Alert): Promise<boolean> {
+  const observerNotes = alert.observerNotes ?? "";
+  const payload = `species:${alert.species} notes:${observerNotes}`;
+  try {
+    const response = await fetch(`http://localhost:${env.MCP_PORT}/inspect_input`, {
+      method: "POST",
+      headers: await buildCivicHeaders(),
+      body: JSON.stringify({ payload, toolName: "alert:email" }),
+      signal: AbortSignal.timeout(CIVIC_TIMEOUT_MS),
+    });
+    if (!response.ok) return false;
+    const result = (await response.json()) as { blocked?: boolean };
+    return result.blocked === true;
+  } catch {
+    console.warn("[alert-agent] civic-mcp inspect_input unavailable; proceeding without guardrail");
+    return false;
+  }
+}
 
 function buildHtml(alert: Alert): string {
   const action =
     alert.threatLevel === ThreatLevel.CRITICAL
       ? "Dispatch ranger unit immediately"
       : "Review required";
+
+  const species = escHtml(alert.species);
+  const iucnStatus = escHtml(alert.iucnStatus);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -24,7 +60,7 @@ function buildHtml(alert: Alert): string {
         <p style="margin:0 0 4px;font-size:11px;letter-spacing:2px;color:#7aab8a;text-transform:uppercase;">RangerAI · Wildlife Monitoring</p>
         <h1 style="margin:0 0 24px;font-size:24px;color:#e8f0eb;">
           <span style="background:#c85a3a;color:#fff;border-radius:4px;padding:2px 10px;font-size:13px;vertical-align:middle;margin-right:10px;">CRITICAL</span>
-          ${alert.species}
+          ${species}
         </h1>
 
         <!-- IUCN status -->
@@ -32,7 +68,7 @@ function buildHtml(alert: Alert): string {
           <tr>
             <td style="padding:12px;background:#0d1f16;border-radius:6px;border-left:3px solid #c85a3a;">
               <p style="margin:0 0 4px;font-size:11px;color:#7aab8a;text-transform:uppercase;letter-spacing:1px;">IUCN Status</p>
-              <p style="margin:0;font-size:18px;font-weight:bold;color:#e8f0eb;">${alert.iucnStatus}</p>
+              <p style="margin:0;font-size:18px;font-weight:bold;color:#e8f0eb;">${iucnStatus}</p>
             </td>
           </tr>
         </table>
@@ -103,13 +139,19 @@ export async function dispatchEmail(alert: Alert): Promise<boolean> {
     return true;
   }
 
+  const blocked = await inspectEmailPayload(alert);
+  if (blocked) {
+    console.warn(`[alert-agent] civic inspect_input blocked email dispatch for alert ${alert.alertId}`);
+    return false;
+  }
+
   const resend = new Resend(apiKey);
 
   try {
     const { error } = await resend.emails.send({
       from,
       to,
-      subject: `CRITICAL ALERT: ${alert.species} — RangerAI`,
+      subject: `CRITICAL ALERT: ${escHtml(alert.species)} — RangerAI`,
       html: buildHtml(alert),
       text: plainTextFallback(alert),
     });
