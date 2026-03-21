@@ -4,7 +4,6 @@ import { generateText } from "ai";
 import { openai as aiSdkOpenai } from "@ai-sdk/openai";
 import OpenAI from "openai";
 import { type ScoredSighting, ThreatLevel } from "@rangerai/shared";
-import { env } from "@rangerai/shared/env";
 
 const REPORTS_DIR = path.resolve(process.cwd(), "reports");
 
@@ -20,7 +19,7 @@ interface ReportStats {
   total: number;
   byThreatLevel: Record<ThreatLevel, number>;
   speciesFrequency: Array<{ species: string; count: number }>;
-  mostAnomalous: ScoredSighting;
+  mostAnomalous: ScoredSighting | null;
 }
 
 export function buildStats(sightings: ScoredSighting[]): ReportStats {
@@ -44,26 +43,34 @@ export function buildStats(sightings: ScoredSighting[]): ReportStats {
     .map(([species, count]) => ({ species, count }))
     .sort((a, b) => b.count - a.count);
 
-  const mostAnomalous = [...sightings].sort(
-    (a, b) => b.anomalyScore - a.anomalyScore
-  )[0];
+  const mostAnomalous =
+    sightings.length === 0
+      ? null
+      : [...sightings].sort((a, b) => b.anomalyScore - a.anomalyScore)[0];
 
   return { total, byThreatLevel, speciesFrequency, mostAnomalous };
 }
 
 export async function generateIllustration(species: string): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    console.warn(`[alert-agent] OPENAI_API_KEY not set — skipping illustration`);
+    return `data:image/svg+xml;utf8,${encodeURIComponent(PAWPRINT_SVG)}`;
+  }
+
   try {
-    const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    const client = new OpenAI({ apiKey });
     const response = await client.images.generate({
       model: "dall-e-3",
       prompt: `detailed scientific field illustration of ${species}, naturalist sketchbook style, black ink on cream paper`,
       size: "1024x1024",
       quality: "standard",
       n: 1,
+      response_format: "b64_json",
     });
-    const url = response.data[0]?.url;
-    if (!url) throw new Error("no image URL in DALL-E response");
-    return url;
+    const b64 = response.data?.[0]?.b64_json;
+    if (!b64) throw new Error("no b64_json in DALL-E response");
+    return `data:image/png;base64,${b64}`;
   } catch (err) {
     console.warn(
       `[alert-agent] DALL-E 3 illustration failed for "${species}": ${String(err)}`
@@ -75,6 +82,12 @@ export async function generateIllustration(species: string): Promise<string> {
 export async function generateNarrative(
   sightings: ScoredSighting[]
 ): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    console.warn(`[alert-agent] OPENAI_API_KEY not set — using narrative fallback`);
+    return buildNarrativeFallback(sightings);
+  }
+
   try {
     const summary = sightings
       .map(
@@ -97,15 +110,19 @@ export async function generateNarrative(
     console.warn(
       `[alert-agent] GPT-4o narrative failed: ${String(err)} — using fallback`
     );
-    const lines = sightings.map(
-      (s) =>
-        `${s.species}: threat=${s.threatLevel}, anomaly score=${s.anomalyScore}/100, IUCN status=${s.iucnStatus}, in-range=${s.inRange}`
-    );
-    return (
-      `Field report — ${sightings.length} sighting(s) recorded.\n\n` +
-      lines.join("\n")
-    );
+    return buildNarrativeFallback(sightings);
   }
+}
+
+function buildNarrativeFallback(sightings: ScoredSighting[]): string {
+  const lines = sightings.map(
+    (s) =>
+      `${s.species}: threat=${s.threatLevel}, anomaly score=${s.anomalyScore}/100, IUCN status=${s.iucnStatus}, in-range=${s.inRange}`
+  );
+  return (
+    `Field report — ${sightings.length} sighting(s) recorded.\n\n` +
+    lines.join("\n")
+  );
 }
 
 function escHtml(s: string): string {
@@ -130,14 +147,70 @@ function threatBadgeColor(level: ThreatLevel): string {
   }
 }
 
-function renderStatsTable(stats: ReportStats): string {
-  const speciesRows = stats.speciesFrequency
-    .map(
-      ({ species, count }) =>
-        `<tr><td>${escHtml(species)}</td><td>${count}</td></tr>`
-    )
+function renderFrequencyChart(
+  speciesFrequency: Array<{ species: string; count: number }>
+): string {
+  if (speciesFrequency.length === 0) return "";
+
+  const BAR_HEIGHT = 28;
+  const BAR_GAP = 8;
+  const LABEL_WIDTH = 200;
+  const MAX_BAR_WIDTH = 300;
+  const CHART_PADDING = 16;
+
+  const maxCount = speciesFrequency[0].count;
+  const svgHeight =
+    speciesFrequency.length * (BAR_HEIGHT + BAR_GAP) - BAR_GAP + CHART_PADDING * 2;
+  const svgWidth = LABEL_WIDTH + MAX_BAR_WIDTH + 48;
+
+  const bars = speciesFrequency
+    .map(({ species, count }, i) => {
+      const barWidth = maxCount > 0 ? (count / maxCount) * MAX_BAR_WIDTH : 0;
+      const y = CHART_PADDING + i * (BAR_HEIGHT + BAR_GAP);
+      return `
+      <text x="${LABEL_WIDTH - 8}" y="${y + BAR_HEIGHT / 2 + 5}" text-anchor="end" fill="#2a3a2e" font-size="12" font-family="Space Grotesk, sans-serif">${escHtml(species)}</text>
+      <rect x="${LABEL_WIDTH}" y="${y}" width="${barWidth}" height="${BAR_HEIGHT}" rx="3" fill="#2d5a3d" opacity="0.75"/>
+      <text x="${LABEL_WIDTH + barWidth + 6}" y="${y + BAR_HEIGHT / 2 + 5}" fill="#5a7a5a" font-size="12" font-family="Space Grotesk, sans-serif">${count}</text>`;
+    })
     .join("\n");
 
+  return `
+    <section class="chart-section">
+      <h3>Species Frequency</h3>
+      <svg viewBox="0 0 ${svgWidth} ${svgHeight}" width="100%" style="max-width:${svgWidth}px;display:block;">
+        ${bars}
+      </svg>
+    </section>`;
+}
+
+function renderMapSection(mostAnomalous: ScoredSighting): string {
+  const lat = mostAnomalous.lat.toFixed(6);
+  const lng = mostAnomalous.lng.toFixed(6);
+  const zoom = 8;
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${mostAnomalous.lng - 2},${mostAnomalous.lat - 2},${mostAnomalous.lng + 2},${mostAnomalous.lat + 2}&layer=mapnik&marker=${lat},${lng}`;
+
+  return `
+    <section class="map-section">
+      <h3>Most Anomalous Sighting — Location</h3>
+      <p class="map-label">${escHtml(mostAnomalous.species)} &middot; ${lat}, ${lng} &middot; anomaly score ${mostAnomalous.anomalyScore}/100</p>
+      <div class="map-frame">
+        <iframe
+          src="${mapUrl}"
+          width="100%"
+          height="300"
+          frameborder="0"
+          scrolling="no"
+          marginheight="0"
+          marginwidth="0"
+          title="Sighting location map"
+          loading="lazy"
+        ></iframe>
+      </div>
+      <p class="map-credit"><a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}" target="_blank" rel="noopener">View larger map</a></p>
+    </section>`;
+}
+
+function renderStatsTable(stats: ReportStats): string {
   const threatRows = (
     Object.entries(stats.byThreatLevel) as [ThreatLevel, number][]
   )
@@ -148,23 +221,16 @@ function renderStatsTable(stats: ReportStats): string {
     )
     .join("\n");
 
-  return `
-    <section class="stats">
-      <h2>Sighting Statistics</h2>
-      <p class="stat-total">Total sightings: <strong>${stats.total}</strong></p>
+  const speciesTableRows = stats.speciesFrequency
+    .map(
+      ({ species, count }) =>
+        `<tr><td>${escHtml(species)}</td><td>${count}</td></tr>`
+    )
+    .join("\n");
 
-      <h3>By Threat Level</h3>
-      <table>
-        <thead><tr><th>Level</th><th>Count</th></tr></thead>
-        <tbody>${threatRows}</tbody>
-      </table>
-
-      <h3>Species Frequency</h3>
-      <table>
-        <thead><tr><th>Species</th><th>Sightings</th></tr></thead>
-        <tbody>${speciesRows}</tbody>
-      </table>
-
+  const mostAnomalousSection =
+    stats.mostAnomalous !== null
+      ? `
       <h3>Most Anomalous Sighting</h3>
       <table>
         <thead><tr><th>Field</th><th>Value</th></tr></thead>
@@ -177,7 +243,34 @@ function renderStatsTable(stats: ReportStats): string {
           <tr><td>In Range</td><td>${stats.mostAnomalous.inRange ? "Yes" : "No — out of expected range"}</td></tr>
           <tr><td>Observed</td><td>${stats.mostAnomalous.observedAt.toISOString()}</td></tr>
         </tbody>
+      </table>`
+      : "";
+
+  const mapSection =
+    stats.mostAnomalous !== null ? renderMapSection(stats.mostAnomalous) : "";
+
+  return `
+    <section class="stats">
+      <h2>Sighting Statistics</h2>
+      <p class="stat-total">Total sightings: <strong>${stats.total}</strong></p>
+
+      <h3>By Threat Level</h3>
+      <table>
+        <thead><tr><th>Level</th><th>Count</th></tr></thead>
+        <tbody>${threatRows}</tbody>
       </table>
+
+      ${renderFrequencyChart(stats.speciesFrequency)}
+
+      <h3>Species Breakdown</h3>
+      <table>
+        <thead><tr><th>Species</th><th>Sightings</th></tr></thead>
+        <tbody>${speciesTableRows}</tbody>
+      </table>
+
+      ${mostAnomalousSection}
+
+      ${mapSection}
     </section>`;
 }
 
@@ -191,9 +284,9 @@ function buildHtml(params: {
   const { illustrationUrl, narrative, stats, primarySpecies, timestamp } =
     params;
 
-  const illustrationEl = illustrationUrl.startsWith("data:")
+  const illustrationEl = illustrationUrl.startsWith("data:image/svg")
     ? `<div class="illustration-placeholder">${PAWPRINT_SVG}<p class="placeholder-label">Illustration unavailable</p></div>`
-    : `<img src="${escHtml(illustrationUrl)}" alt="Scientific field illustration of ${escHtml(primarySpecies)}" class="illustration" />`;
+    : `<img src="${illustrationUrl}" alt="Scientific field illustration of ${escHtml(primarySpecies)}" class="illustration" />`;
 
   const narrativeHtml = narrative
     .split("\n\n")
@@ -374,10 +467,45 @@ function buildHtml(params: {
       letter-spacing: 0.5px;
     }
 
+    .chart-section {
+      margin: 24px 0;
+    }
+
+    .map-section {
+      margin: 24px 0;
+    }
+
+    .map-label {
+      font-size: 13px;
+      color: #5a7a5a;
+      margin-bottom: 10px;
+      font-family: 'Caveat', cursive;
+      font-size: 15px;
+    }
+
+    .map-frame {
+      border: 1px solid #d4cfc6;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .map-frame iframe {
+      display: block;
+    }
+
+    .map-credit {
+      font-size: 11px;
+      color: #8a9a8a;
+      margin-top: 6px;
+    }
+
+    .map-credit a {
+      color: #5a8a6a;
+    }
+
     footer {
       border-top: 1px solid #d4cfc6;
       padding-top: 20px;
-      font-size: 12px;
       color: #8a9a8a;
       font-family: 'Caveat', cursive;
       font-size: 14px;
@@ -390,6 +518,7 @@ function buildHtml(params: {
       .two-col { grid-template-columns: 220px 1fr; gap: 24px; }
       .stats { page-break-before: always; }
       table { page-break-inside: avoid; }
+      .map-frame { display: none; }
       footer { page-break-before: avoid; }
       a { color: inherit; text-decoration: none; }
     }
@@ -452,7 +581,7 @@ export async function generateReport(
   const filename = `${timestamp}-report.html`;
   const filePath = path.join(REPORTS_DIR, filename);
 
-  await Bun.write(filePath, html);
+  await fs.writeFile(filePath, html, "utf8");
 
   console.log(`[alert-agent] report saved to ${filePath}`);
   return filePath;
