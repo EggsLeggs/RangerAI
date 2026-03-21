@@ -55,7 +55,7 @@ GBIF API ─────────┘                        │              
 ### alert agent
 - formats human-readable alert messages (separate templates for SMS and webhook)
 - POSTs structured `Alert` JSON to dashboard webhook, retrying up to 3x on failure
-- sends Twilio SMS for `CRITICAL` alerts only (stubs to console.log without creds)
+- sends email via Resend for `CRITICAL` alerts only (stubs to console.log without creds)
 - generates on-demand **illustrated conservation field reports** - AI-generated species illustrations, narrative summary, threat breakdown, map embed, sighting frequency charts. saved to `/reports` as styled HTML. generation is the core of this feature, not a wrapper
 - **civic**: calls `inspect_input` on civic-mcp server before dispatch - blocks injected instructions in species names or observer notes
 
@@ -68,7 +68,7 @@ GBIF API ─────────┘                        │              
 | iNaturalist | `https://api.inaturalist.org/v1` | research-grade observations with photos |
 | GBIF | `https://api.gbif.org/v1` | occurrence records by bounding box |
 | IUCN Red List | `https://api.iucnredlist.org/api/v4` | conservation status + range data |
-| Twilio | SMS API | critical alert dispatch |
+| Resend | Email API | critical alert dispatch |
 
 ---
 
@@ -153,7 +153,7 @@ WEBHOOK_URL=http://localhost:3000/api/alerts
 | map | Leaflet | lightweight, no API token required |
 | styling | Tailwind + custom theme | fast iteration, custom forest palette via theme config |
 | reports | DALL-E 3 + HTML template | species illustrations + narrative text, no PDF lib needed |
-| SMS | Twilio SDK with stub fallback | falls back to console.log without creds |
+| email alerts | Resend SDK with stub fallback | falls back to console.log without creds |
 | data | in-memory + optional SQLite | no DB setup cost, `better-sqlite3` only if persistence needed |
 | dev runner | bun + concurrently | bun runs TypeScript natively, no compile step |
 
