@@ -8,9 +8,6 @@
     "@rangerwatch/shared": "workspace:*",
     "node-cron": "^4.2.1"
   },
-  "devDependencies": {
-    "@types/node-cron": "^3.0.11"
-  },
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",

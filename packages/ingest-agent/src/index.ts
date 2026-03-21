@@ -1,5 +1,5 @@
 import type { BoundingBox } from "@rangerwatch/shared";
-import { startPolling } from "./poller.js";
+import { startPolling, stopPolling } from "./poller.js";
 
 export { ingestEvents } from "./events.js";
 
@@ -10,5 +10,11 @@ const AMBOSELI: BoundingBox = {
   swLng: 36.8,
 };
 
-console.log("[ingest-agent] ingest agent started");
-startPolling(AMBOSELI);
+export function startIngestAgent(): void {
+  console.log("[ingest-agent] ingest agent started");
+  startPolling(AMBOSELI);
+}
+
+export function stopIngestAgent(): void {
+  stopPolling();
+}
