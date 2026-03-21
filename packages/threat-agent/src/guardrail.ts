@@ -61,10 +61,30 @@ export async function guardedFetch(
   toolName: string,
   options?: RequestInit
 ): Promise<Response | null> {
-  const guardrail = await inspectInput(url, toolName);
+  // Inspect the full outbound request context, not just the URL, so the
+  // guardrail can detect injection patterns in method, headers, or body.
+  const bodyText =
+    typeof options?.body === "string"
+      ? options.body
+      : options?.body != null
+        ? "[non-string body]"
+        : undefined;
+
+  const requestPayload = JSON.stringify({
+    url,
+    method: options?.method ?? "GET",
+    headers: options?.headers ?? {},
+    ...(bodyText !== undefined ? { body: bodyText } : {}),
+  });
+
+  const guardrail = await inspectInput(requestPayload, toolName);
   if (guardrail.blocked) {
+    // Strip query string before logging to avoid leaking sensitive params.
+    const sanitizedUrl = (() => {
+      try { const u = new URL(url); return u.origin + u.pathname; } catch { return url; }
+    })();
     console.warn(
-      `[threat-agent] guardedFetch blocked url=${url} toolName=${toolName} reason=${guardrail.reason ?? "unspecified"}`
+      `[threat-agent] guardedFetch blocked url=${sanitizedUrl} toolName=${toolName} reason=${guardrail.reason ?? "unspecified"}`
     );
     return null;
   }
