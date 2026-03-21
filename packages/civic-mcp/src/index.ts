@@ -1,11 +1,18 @@
-import { readMcpPort } from "@rangerwatch/shared/mcp-port";
-import { startCivicMcpServer } from "./server.js";
+import { config } from "dotenv";
+config(); // must run before any process.env reads
 
-export { inspectPayloadForInjection } from "./injection.js";
-export { audit_log } from "./server.js";
-export { startCivicMcpServer } from "./server.js";
+import { readMcpPort } from "@rangerwatch/shared/mcp-port";
+import { initSdk } from "./inspect.js";
+import { startCivicMCP } from "./server.js";
+
+export { startCivicMCP } from "./server.js";
+
+export async function startCivicMcpServer(): Promise<void> {
+  await initSdk();
+  const port = readMcpPort();
+  startCivicMCP(port);
+}
 
 if (import.meta.main) {
-  const port = readMcpPort();
-  startCivicMcpServer(port);
+  await startCivicMcpServer();
 }
