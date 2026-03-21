@@ -7,6 +7,7 @@ import {
   WEIGHT_OUT_OF_RANGE,
   WEIGHT_ENDANGERED_SPECIES,
   WEIGHT_INVASIVE_FIRST_APPEARANCE,
+  WEIGHT_HUMAN_CLUSTERING,
 } from "./scoring.js";
 
 const baseSighting: ClassifiedSighting = {
@@ -29,6 +30,7 @@ describe("scoreSighting", () => {
       inRange: false,
       iucnStatus: "CR",
       previouslySeen: false,
+      humanClusterNearby: false,
     });
     expect(score).toBeGreaterThanOrEqual(65);
     expect(score).toBe(WEIGHT_OUT_OF_RANGE + WEIGHT_ENDANGERED_SPECIES); // 40 + 25 = 65
@@ -39,6 +41,7 @@ describe("scoreSighting", () => {
       inRange: true,
       iucnStatus: "LC",
       previouslySeen: false,
+      humanClusterNearby: false,
     });
     expect(score).toBe(0);
   });
@@ -49,6 +52,7 @@ describe("scoreSighting", () => {
       inRange: true,
       iucnStatus: "LC",
       previouslySeen: false,
+      humanClusterNearby: false,
     });
     expect(score).toBe(WEIGHT_NOCTURNAL);
   });
@@ -59,6 +63,7 @@ describe("scoreSighting", () => {
       inRange: true,
       iucnStatus: "LC",
       previouslySeen: false,
+      humanClusterNearby: false,
     });
     expect(score).toBe(WEIGHT_INVASIVE_FIRST_APPEARANCE);
   });
@@ -69,12 +74,33 @@ describe("scoreSighting", () => {
       inRange: true,
       iucnStatus: "LC",
       previouslySeen: true,
+      humanClusterNearby: false,
     });
     expect(score).toBe(0);
   });
 
-  it("max score clamps at 100 when all signals active", () => {
-    // out-of-range (40) + nocturnal (20) + endangered (25) + invasive first (15) = 100
+  it("human clustering adds WEIGHT_HUMAN_CLUSTERING for CR species", () => {
+    const score = scoreSighting(baseSighting, {
+      inRange: true,
+      iucnStatus: "CR",
+      previouslySeen: false,
+      humanClusterNearby: true,
+    });
+    expect(score).toBe(WEIGHT_ENDANGERED_SPECIES + WEIGHT_HUMAN_CLUSTERING);
+  });
+
+  it("human clustering does not add weight for LC species", () => {
+    const score = scoreSighting(baseSighting, {
+      inRange: true,
+      iucnStatus: "LC",
+      previouslySeen: false,
+      humanClusterNearby: true,
+    });
+    expect(score).toBe(0);
+  });
+
+  it("score clamps at 100 when all signals active (sum exceeds 100)", () => {
+    // out-of-range (40) + nocturnal (20) + endangered (25) + human-clustering (15) + invasive first (15) = 115 -> clamped to 100
     const worst = {
       ...baseSighting,
       invasive: true,
@@ -84,8 +110,29 @@ describe("scoreSighting", () => {
       inRange: false,
       iucnStatus: "CR",
       previouslySeen: false,
+      humanClusterNearby: true,
     });
     expect(score).toBe(100);
+  });
+
+  it("invasive first appearance works correctly for negative lat/lng coordinates", () => {
+    const invasive = { ...baseSighting, invasive: true, lat: -0.1, lng: -0.1 };
+    expect(
+      scoreSighting(invasive, {
+        inRange: true,
+        iucnStatus: "LC",
+        previouslySeen: false,
+        humanClusterNearby: false,
+      })
+    ).toBe(WEIGHT_INVASIVE_FIRST_APPEARANCE);
+    expect(
+      scoreSighting(invasive, {
+        inRange: true,
+        iucnStatus: "LC",
+        previouslySeen: true,
+        humanClusterNearby: false,
+      })
+    ).toBe(0);
   });
 });
 
@@ -103,14 +150,14 @@ describe("isNocturnal", () => {
   });
 
   it("returns false on boundary of 06:00 local", () => {
-    // 06:00 UTC at lng 0 = 06:00 local — not nocturnal (< 6 is false at exactly 6)
+    // 06:00 UTC at lng 0 = 06:00 local - not nocturnal (< 6 is false at exactly 6)
     expect(isNocturnal(new Date("2024-01-01T06:00:00Z"), 0)).toBe(false);
   });
 
   it("accounts for timezone offset via longitude", () => {
-    // 20:00 UTC at lng -75 (UTC-5) = 15:00 local — daytime
+    // 20:00 UTC at lng -75 (UTC-5) = 15:00 local - daytime
     expect(isNocturnal(new Date("2024-01-01T20:00:00Z"), -75)).toBe(false);
-    // 20:00 UTC at lng 75 (UTC+5) = 01:00 local — nocturnal
+    // 20:00 UTC at lng 75 (UTC+5) = 01:00 local - nocturnal
     expect(isNocturnal(new Date("2024-01-01T20:00:00Z"), 75)).toBe(true);
   });
 });
