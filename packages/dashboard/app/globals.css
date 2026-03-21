@@ -2,19 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ranger-scrollbar-track: #e8e5de;
+  --ranger-scrollbar-thumb: #cbc8c0;
+  --ranger-scrollbar-thumb-hover: #9a9790;
+}
+
 /* Custom scrollbar */
+.ranger-scrollbar {
+  scrollbar-color: var(--ranger-scrollbar-thumb) var(--ranger-scrollbar-track);
+  scrollbar-width: thin;
+}
 .ranger-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 .ranger-scrollbar::-webkit-scrollbar-track {
-  background: #E8E5DE;
+  background: var(--ranger-scrollbar-track);
 }
 .ranger-scrollbar::-webkit-scrollbar-thumb {
-  background: #CBC8C0;
+  background: var(--ranger-scrollbar-thumb);
   border-radius: 3px;
 }
 .ranger-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9A9790;
+  background: var(--ranger-scrollbar-thumb-hover);
 }
 
 /* Pulse animation for live indicator */

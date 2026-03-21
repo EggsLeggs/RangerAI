@@ -1,6 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Icons } from "./icons";
+import type { MapSighting } from "./live-map";
+
+const LiveMap = dynamic(
+  () => import("./live-map").then((m) => m.LiveMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[min(70vh,560px)] w-full animate-pulse rounded-xl border border-ranger-border bg-ranger-border/30" />
+    ),
+  }
+);
 import {
   BarChart,
   Bar,
@@ -22,6 +35,7 @@ interface NavItem {
   name: string;
   icon: React.ReactNode;
   active?: boolean;
+  onSelect?: () => void;
 }
 
 interface NavSection {
@@ -31,7 +45,7 @@ interface NavSection {
 
 // ============ HOOKS ============
 function useWindowSize() {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
+  const [breakpoint, setBreakpoint] = useState<Breakpoint | null>(null);
 
   useEffect(() => {
     function handleResize() {
@@ -110,387 +124,10 @@ function useStaggeredMount(itemCount: number, baseDelay: number = 100) {
   return visibleItems;
 }
 
-// ============ ICONS ============
-const Icons = {
-  Dashboard: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  ),
-  Map: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-      <line x1="8" y1="2" x2="8" y2="18" />
-      <line x1="16" y1="6" x2="16" y2="22" />
-    </svg>
-  ),
-  Alert: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  ),
-  Zone: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  ),
-  Animal: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5" />
-      <path d="M14.5 5.172C14.5 3.782 16.077 2.679 18 3c2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.96-1.45-2.344-2.5" />
-      <path d="M8 14v.5" />
-      <path d="M16 14v.5" />
-      <path d="M11.25 16.25h1.5L12 17l-.75-.75Z" />
-      <path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306" />
-    </svg>
-  ),
-  Species: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  ),
-  Sighting: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  Dispatch: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-      <path d="M15 18H9" />
-      <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
-      <circle cx="17" cy="18" r="2" />
-      <circle cx="7" cy="18" r="2" />
-    </svg>
-  ),
-  Report: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <polyline points="10 9 9 9 8 9" />
-    </svg>
-  ),
-  Logs: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-    </svg>
-  ),
-  Bell: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  ),
-  Support: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  ),
-  Menu: () => (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="3" y1="12" x2="21" y2="12" />
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <line x1="3" y1="18" x2="21" y2="18" />
-    </svg>
-  ),
-  Close: () => (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  ),
-  Search: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  ),
-  MoreVertical: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="12" cy="5" r="1" />
-      <circle cx="12" cy="19" r="1" />
-    </svg>
-  ),
-  ChevronDown: () => (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  ),
-  ArrowUp: () => (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
-    </svg>
-  ),
-  ArrowDown: () => (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <polyline points="19 12 12 19 5 12" />
-    </svg>
-  ),
-  Filter: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-    </svg>
-  ),
-  Stable: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  ),
-  Risk: () => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  ),
-};
-
 // ============ DATA ============
-const navSections: NavSection[] = [
-  {
-    title: "MONITORING",
-    items: [
-      { name: "Dashboard", icon: <Icons.Dashboard />, active: true },
-      { name: "Live Map", icon: <Icons.Map /> },
-      { name: "Alert Feed", icon: <Icons.Alert /> },
-      { name: "Zone Manager", icon: <Icons.Zone /> },
-    ],
-  },
-  {
-    title: "WILDLIFE",
-    items: [
-      { name: "Animal Tracker", icon: <Icons.Animal /> },
-      { name: "Species Index", icon: <Icons.Species /> },
-      { name: "Sighting Log", icon: <Icons.Sighting /> },
-    ],
-  },
-  {
-    title: "OPERATIONS",
-    items: [
-      { name: "Ranger Dispatch", icon: <Icons.Dispatch /> },
-      { name: "Reports", icon: <Icons.Report /> },
-      { name: "Agent Logs", icon: <Icons.Logs /> },
-    ],
-  },
-];
+type DashboardView = "dashboard" | "live-map";
 
-const agentPipeline = [
+const INITIAL_AGENT_PIPELINE = [
   { name: "Ingest Agent", status: "Polling", color: "#4a7c5a" },
   { name: "Vision Agent", status: "Classifying", color: "#4a7c5a" },
   { name: "Threat Agent", status: "1 Warning", color: "#B86F0A" },
@@ -512,7 +149,7 @@ const zoneHealthData = [
   { name: "Southern Scrub", coverage: 58, color: "#B86F0A" },
 ];
 
-const recentSightings = [
+const INITIAL_RECENT_SIGHTINGS = [
   { zone: "ZN-01", species: "African Elephant", threat: "INFO", time: "2 mins ago" },
   { zone: "ZN-03", species: "Lion Pride", threat: "WARNING", time: "8 mins ago" },
   { zone: "ZN-02", species: "Cape Buffalo", threat: "INFO", time: "15 mins ago" },
@@ -521,12 +158,46 @@ const recentSightings = [
   { zone: "ZN-09", species: "Black Rhino", threat: "CRITICAL", time: "45 mins ago" },
 ];
 
-const frequencyData = Array.from({ length: 7 * 24 }, (_, i) => ({
-  hour: i,
-  elephant: Math.sin(i / 6) * 20 + 30,
-  lion: Math.cos(i / 8) * 15 + 25,
-  rhino: Math.sin(i / 10 + 2) * 12 + 18,
-}));
+const DEMO_MAP_SIGHTINGS: MapSighting[] = [
+  { lat: -2.15, lng: 34.75, level: "INFO", label: "African Elephant" },
+  { lat: -2.4, lng: 35.0, level: "WARNING", label: "Lion Pride" },
+  { lat: -2.3, lng: 34.9, level: "INFO", label: "Cape Buffalo" },
+  { lat: -2.5, lng: 34.8, level: "CRITICAL", label: "Leopard" },
+  { lat: -2.2, lng: 35.1, level: "WARNING", label: "Cheetah" },
+  { lat: -2.45, lng: 34.7, level: "CRITICAL", label: "Black Rhino" },
+];
+
+function getPointsForFrequency(tab: string): number {
+  switch (tab) {
+    case "7 Days":
+      return 7 * 24;
+    case "30 Days":
+      return 30 * 24;
+    case "90 Days":
+      return 90 * 24;
+    default:
+      return 7 * 24;
+  }
+}
+
+function buildFrequencySeries(totalHours: number) {
+  return Array.from({ length: totalHours }, (_, i) => ({
+    hour: i,
+    elephant: Math.sin(i / 6) * 20 + 30,
+    lion: Math.cos(i / 8) * 15 + 25,
+    rhino: Math.sin(i / 10 + 2) * 12 + 18,
+  }));
+}
+
+function zoneIdFromCoords(lat: number, lng: number): string {
+  const n = Math.abs(Math.floor(lat * 10 + lng * 10)) % 99;
+  return `ZN-${String(n).padStart(2, "0")}`;
+}
+
+function threatToMapLevel(t: string): MapSighting["level"] {
+  if (t === "CRITICAL" || t === "WARNING" || t === "INFO") return t;
+  return "INFO";
+}
 
 // chart theme - colours matched to dark forest palette
 const CHART = {
@@ -572,7 +243,7 @@ function StatCard({
     >
       <div className="text-sm text-ranger-muted">{title}</div>
       <div className="mt-2 flex items-center gap-3">
-        <span className="text-3xl font-semibold text-ranger-cream">{count}</span>
+        <span className="text-3xl font-semibold text-ranger-text">{count}</span>
         <span
           className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
             trend === "up"
@@ -613,7 +284,7 @@ function ZoneProgressBar({
   return (
     <div className="py-2">
       <div className="mb-1 flex justify-between text-sm">
-        <span className="text-ranger-cream">{name}</span>
+        <span className="text-ranger-text">{name}</span>
         <span className="text-ranger-muted">{coverage}%</span>
       </div>
       <div className="h-2 w-full rounded-full bg-ranger-border">
@@ -628,9 +299,10 @@ function ZoneProgressBar({
 
 function ThreatBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    CRITICAL: "bg-ranger-spice text-ranger-cream",
-    WARNING: "bg-ranger-apricot text-ranger-cream",
-    INFO: "bg-ranger-moss text-ranger-cream",
+    CRITICAL: "bg-ranger-spice text-ranger-text",
+    WARNING: "bg-ranger-apricot text-ranger-text",
+    INFO: "bg-ranger-moss text-ranger-text",
+    NEEDS_REVIEW: "bg-ranger-border text-ranger-text",
   };
 
   return (
@@ -644,20 +316,22 @@ function Sidebar({
   isOpen,
   onClose,
   breakpoint,
+  navSections,
 }: {
   isOpen: boolean;
   onClose: () => void;
   breakpoint: Breakpoint;
+  navSections: NavSection[];
 }) {
   const sidebarContent = (
     <div className="flex h-full flex-col bg-ranger-card">
       {/* Logo */}
       <div className="flex h-[72px] items-center gap-3 border-b border-ranger-border px-4">
-        <span className="text-lg font-semibold text-ranger-cream">RangerAI</span>
+        <span className="text-lg font-semibold text-ranger-text">RangerAI</span>
         {breakpoint === "mobile" && (
           <button
             onClick={onClose}
-            className="ml-auto text-ranger-muted hover:text-ranger-cream"
+            className="ml-auto text-ranger-muted hover:text-ranger-text"
           >
             <Icons.Close />
           </button>
@@ -668,10 +342,10 @@ function Sidebar({
       <div className="border-b border-ranger-border p-4">
         <button className="flex w-full items-center justify-between rounded-lg bg-ranger-border/50 p-3 text-left">
           <div>
-            <div className="text-sm font-medium text-ranger-cream">Serengeti Reserve</div>
+            <div className="text-sm font-medium text-ranger-text">Serengeti Reserve</div>
             <div className="text-xs text-ranger-muted">12 zones monitored</div>
           </div>
-          <span className="text-ranger-cream"><Icons.ChevronDown /></span>
+          <span className="text-ranger-text"><Icons.ChevronDown /></span>
         </button>
       </div>
 
@@ -685,10 +359,14 @@ function Sidebar({
             {section.items.map((item) => (
               <button
                 key={item.name}
+                type="button"
+                onClick={() => {
+                  item.onSelect?.();
+                }}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   item.active
-                    ? "border border-ranger-moss/30 bg-ranger-border/50 text-ranger-cream"
-                    : "text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-cream"
+                    ? "border border-ranger-moss/30 bg-ranger-border/50 text-ranger-text"
+                    : "text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text"
                 }`}
               >
                 {item.icon}
@@ -701,22 +379,22 @@ function Sidebar({
 
       {/* Bottom Section */}
       <div className="border-t border-ranger-border p-3">
-        <button className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-cream">
+        <button className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
           <div className="flex items-center gap-3">
             <Icons.Bell />
             Notifications
           </div>
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-ranger-apricot px-1.5 text-xs font-medium text-ranger-cream">
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-ranger-apricot px-1.5 text-xs font-medium text-ranger-text">
             8
           </span>
         </button>
         {/* User Profile */}
         <div className="mt-2 flex items-center gap-3 rounded-lg bg-ranger-border/30 p-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ranger-moss text-sm font-medium text-ranger-cream">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ranger-moss text-sm font-medium text-ranger-text">
             AD
           </div>
           <div className="flex-1">
-            <div className="text-sm font-medium text-ranger-cream">Amara Diallo</div>
+            <div className="text-sm font-medium text-ranger-text">Amara Diallo</div>
             <div className="text-xs text-ranger-muted">Head Ranger</div>
           </div>
         </div>
@@ -753,21 +431,147 @@ export default function RangerDashboard() {
   const breakpoint = useWindowSize();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [frequencyTab, setFrequencyTab] = useState("7 Days");
+  const [activeView, setActiveView] = useState<DashboardView>("dashboard");
+  const [agentPipeline, setAgentPipeline] = useState(INITIAL_AGENT_PIPELINE);
+  const [recentSightings, setRecentSightings] = useState(INITIAL_RECENT_SIGHTINGS);
+  const [mapSightings, setMapSightings] = useState<MapSighting[]>(DEMO_MAP_SIGHTINGS);
+  const [streamLive, setStreamLive] = useState(false);
   const cardsVisible = useStaggeredMount(3, 150);
   const zonesVisible = useStaggeredMount(4, 100);
-  // hoisted out of JSX to satisfy React rules of hooks
   const zoneAnimalCount = useCountUp(847, 1500);
+
+  const pointsToShow = getPointsForFrequency(frequencyTab);
+  const frequencyChartData = useMemo(
+    () => buildFrequencySeries(pointsToShow),
+    [pointsToShow]
+  );
+  const frequencyXInterval = Math.max(0, Math.min(47, Math.floor(pointsToShow / 12) - 1));
+
+  const navSections = useMemo((): NavSection[] => {
+    return [
+      {
+        title: "MONITORING",
+        items: [
+          {
+            name: "Dashboard",
+            icon: <Icons.Dashboard />,
+            active: activeView === "dashboard",
+            onSelect: () => setActiveView("dashboard"),
+          },
+          {
+            name: "Live Map",
+            icon: <Icons.Map />,
+            active: activeView === "live-map",
+            onSelect: () => setActiveView("live-map"),
+          },
+          { name: "Alert Feed", icon: <Icons.Alert />, active: false },
+          { name: "Zone Manager", icon: <Icons.Zone />, active: false },
+        ],
+      },
+      {
+        title: "WILDLIFE",
+        items: [
+          { name: "Animal Tracker", icon: <Icons.Animal />, active: false },
+          { name: "Species Index", icon: <Icons.Species />, active: false },
+          { name: "Sighting Log", icon: <Icons.Sighting />, active: false },
+        ],
+      },
+      {
+        title: "OPERATIONS",
+        items: [
+          { name: "Ranger Dispatch", icon: <Icons.Dispatch />, active: false },
+          { name: "Reports", icon: <Icons.Report />, active: false },
+          { name: "Agent Logs", icon: <Icons.Logs />, active: false },
+        ],
+      },
+    ];
+  }, [activeView]);
+
+  useEffect(() => {
+    const es = new EventSource("/api/alerts");
+
+    es.onmessage = (ev) => {
+      let msg: { type?: string; alert?: Record<string, unknown> };
+      try {
+        msg = JSON.parse(ev.data) as { type?: string; alert?: Record<string, unknown> };
+      } catch {
+        return;
+      }
+
+      if (msg.type === "connected") {
+        setStreamLive(true);
+        return;
+      }
+
+      if (msg.type !== "alert" || !msg.alert) return;
+
+      const a = msg.alert;
+      const species = typeof a.species === "string" ? a.species : "Unknown";
+      const lat = typeof a.lat === "number" ? a.lat : 0;
+      const lng = typeof a.lng === "number" ? a.lng : 0;
+      const threatLevel = typeof a.threatLevel === "string" ? a.threatLevel : "INFO";
+
+      setStreamLive(true);
+      setRecentSightings((prev) =>
+        [
+          {
+            zone: zoneIdFromCoords(lat, lng),
+            species,
+            threat: threatLevel,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+          ...prev,
+        ].slice(0, 20)
+      );
+
+      setMapSightings((prev) =>
+        [
+          {
+            lat,
+            lng,
+            level: threatToMapLevel(threatLevel),
+            label: species,
+          },
+          ...prev,
+        ].slice(0, 40)
+      );
+
+      setAgentPipeline((prev) =>
+        prev.map((p) =>
+          p.name === "Alert Agent" ? { ...p, status: "Dispatching", color: "#4a7c5a" } : p
+        )
+      );
+    };
+
+    return () => es.close();
+  }, []);
+
+  if (breakpoint === null) {
+    return (
+      <div className="flex h-screen flex-col bg-ranger-bg">
+        <div className="h-[72px] animate-pulse border-b border-ranger-border bg-ranger-card/60" />
+        <div className="flex flex-1 flex-col gap-4 p-6">
+          <div className="h-40 animate-pulse rounded-xl bg-ranger-border/40" />
+          <div className="grid flex-1 gap-4 md:grid-cols-2">
+            <div className="animate-pulse rounded-xl bg-ranger-border/30" />
+            <div className="animate-pulse rounded-xl bg-ranger-border/30" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isMobile = breakpoint === "mobile";
   const isDesktop = breakpoint === "desktop";
+  const pageTitle = activeView === "live-map" ? "Live Map" : "Dashboard";
 
   return (
     <div className="flex h-screen flex-col bg-ranger-bg font-sans">
-      {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         breakpoint={breakpoint}
+        navSections={navSections}
       />
 
       {/* Main Content */}
@@ -781,13 +585,13 @@ export default function RangerDashboard() {
                 {!isDesktop && (
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="text-ranger-muted hover:text-ranger-cream"
+                    className="text-ranger-muted hover:text-ranger-text"
                   >
                     <Icons.Menu />
                   </button>
                 )}
-                <h1 className="text-xl font-semibold text-ranger-cream md:text-2xl">
-                  Dashboard
+                <h1 className="text-xl font-semibold text-ranger-text md:text-2xl">
+                  {pageTitle}
                 </h1>
               </div>
 
@@ -798,10 +602,10 @@ export default function RangerDashboard() {
                   <input
                     type="text"
                     placeholder="Search..."
-                    className="w-32 bg-transparent text-sm text-ranger-cream placeholder-ranger-muted outline-none lg:w-48"
+                    className="w-32 bg-transparent text-sm text-ranger-text placeholder-ranger-muted outline-none lg:w-48"
                   />
                 </div>
-                <button className="rounded-lg p-2 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-cream">
+                <button className="rounded-lg p-2 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
                   <Icons.MoreVertical />
                 </button>
               </div>
@@ -822,13 +626,28 @@ export default function RangerDashboard() {
                       style={{ backgroundColor: agent.color }}
                     />
                     <span className="text-xs text-ranger-muted">{agent.name}</span>
-                    <span className="text-xs font-medium text-ranger-cream">{agent.status}</span>
+                    <span className="text-xs font-medium text-ranger-text">{agent.status}</span>
                   </div>
                 ))}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="animate-pulse-live h-2 w-2 rounded-full bg-ranger-moss" />
-                <span className="font-mono text-xs uppercase tracking-widest text-ranger-moss">
+              <div
+                className="flex shrink-0 items-center gap-2"
+                title={
+                  streamLive
+                    ? "Connected to /api/alerts stream"
+                    : "Waiting for alert stream"
+                }
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    streamLive ? "animate-pulse-live bg-ranger-moss" : "bg-ranger-muted"
+                  }`}
+                />
+                <span
+                  className={`font-mono text-xs uppercase tracking-widest ${
+                    streamLive ? "text-ranger-moss" : "text-ranger-muted"
+                  }`}
+                >
                   LIVE
                 </span>
               </div>
@@ -837,6 +656,16 @@ export default function RangerDashboard() {
 
           {/* Main Content Area */}
           <main className="p-4 md:p-6">
+            {activeView === "live-map" ? (
+              <div>
+                <p className="mb-4 text-sm text-ranger-muted">
+                  Severity-coded markers from the alert stream and demo sightings. Critical, warning,
+                  and info levels match pipeline threat scores.
+                </p>
+                <LiveMap sightings={mapSightings} />
+              </div>
+            ) : (
+              <>
             {/* Stat Cards */}
             <div className={`mb-6 grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
               <StatCard
@@ -870,19 +699,19 @@ export default function RangerDashboard() {
               {/* Sighting Activity Chart */}
               <div className="rounded-xl border border-ranger-border bg-ranger-card p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-ranger-cream">Sighting Activity</h2>
+                  <h2 className="text-lg font-semibold text-ranger-text">Sighting Activity</h2>
                   <div className="flex items-center gap-2">
-                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-cream outline-none">
+                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none">
                       <option>All Zones</option>
                       <option>Northern Corridor</option>
                       <option>Eastern Plains</option>
                     </select>
-                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-cream outline-none">
+                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none">
                       <option>30 Days</option>
                       <option>7 Days</option>
                       <option>90 Days</option>
                     </select>
-                    <button className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-cream">
+                    <button className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
                       <Icons.Filter />
                     </button>
                   </div>
@@ -928,7 +757,7 @@ export default function RangerDashboard() {
               {/* Sighting Frequency */}
               <div className="rounded-xl border border-ranger-border bg-ranger-card p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-ranger-cream">Sighting Frequency</h2>
+                  <h2 className="text-lg font-semibold text-ranger-text">Sighting Frequency</h2>
                 </div>
                 <div className="mb-4 flex gap-1">
                   {["7 Days", "30 Days", "90 Days"].map((tab) => (
@@ -937,8 +766,8 @@ export default function RangerDashboard() {
                       onClick={() => setFrequencyTab(tab)}
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                         frequencyTab === tab
-                          ? "bg-ranger-border text-ranger-cream"
-                          : "text-ranger-muted hover:text-ranger-cream"
+                          ? "bg-ranger-border text-ranger-text"
+                          : "text-ranger-muted hover:text-ranger-text"
                       }`}
                     >
                       {tab}
@@ -947,7 +776,7 @@ export default function RangerDashboard() {
                 </div>
                 <div className="h-[200px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={frequencyData.slice(0, 48)}>
+                    <LineChart data={frequencyChartData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={CHART.grid}
@@ -958,7 +787,7 @@ export default function RangerDashboard() {
                         tick={{ fill: CHART.axis, fontSize: 10 }}
                         tickLine={{ stroke: CHART.grid }}
                         axisLine={{ stroke: CHART.grid }}
-                        interval={11}
+                        interval={frequencyXInterval}
                       />
                       <YAxis
                         tick={{ fill: CHART.axis, fontSize: 10 }}
@@ -1011,9 +840,9 @@ export default function RangerDashboard() {
             <div className={`grid gap-6 ${isDesktop ? "grid-cols-2" : "grid-cols-1"}`}>
               {/* Zone Health */}
               <div className="rounded-xl border border-ranger-border bg-ranger-card p-5">
-                <h2 className="mb-4 text-lg font-semibold text-ranger-cream">Zone Health</h2>
+                <h2 className="mb-4 text-lg font-semibold text-ranger-text">Zone Health</h2>
                 <div className="mb-4">
-                  <div className="text-3xl font-semibold text-ranger-cream">
+                  <div className="text-3xl font-semibold text-ranger-text">
                     {zoneAnimalCount} Animals
                   </div>
                 </div>
@@ -1047,7 +876,7 @@ export default function RangerDashboard() {
 
               {/* Recent Sightings */}
               <div className="rounded-xl border border-ranger-border bg-ranger-card p-5">
-                <h2 className="mb-4 text-lg font-semibold text-ranger-cream">Recent Sightings</h2>
+                <h2 className="mb-4 text-lg font-semibold text-ranger-text">Recent Sightings</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -1068,10 +897,10 @@ export default function RangerDashboard() {
                           <td className="py-3 pr-4 text-sm text-ranger-muted">{sighting.zone}</td>
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ranger-border text-xs font-medium text-ranger-cream">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ranger-border text-xs font-medium text-ranger-text">
                                 {sighting.species[0]}
                               </div>
-                              <span className="text-sm text-ranger-cream">{sighting.species}</span>
+                              <span className="text-sm text-ranger-text">{sighting.species}</span>
                             </div>
                           </td>
                           <td className="py-3 pr-4">
@@ -1079,7 +908,7 @@ export default function RangerDashboard() {
                           </td>
                           <td className="py-3 pr-4 text-sm text-ranger-muted">{sighting.time}</td>
                           <td className="py-3">
-                            <button className="text-ranger-muted hover:text-ranger-cream">
+                            <button className="text-ranger-muted hover:text-ranger-text">
                               <Icons.MoreVertical />
                             </button>
                           </td>
@@ -1090,6 +919,8 @@ export default function RangerDashboard() {
                 </div>
               </div>
             </div>
+              </>
+            )}
           </main>
         </div>
 

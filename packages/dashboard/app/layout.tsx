@@ -24,7 +24,7 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${caveat.variable}`}>
-      <body className="min-h-screen bg-ranger-bg text-ranger-cream font-sans antialiased">
+      <body className="min-h-screen bg-ranger-bg text-ranger-text font-sans antialiased">
         {children}
       </body>
     </html>

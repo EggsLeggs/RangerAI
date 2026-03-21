@@ -22,7 +22,7 @@ const config: Config = {
         "ranger-card": "#F2EFE8",
         "ranger-border": "#CBC8C0",
         "ranger-muted": "#7A7670",
-        "ranger-cream": "#1C2417",
+        "ranger-text": "#1C2417",
         "ranger-moss": "#4a7c5a",
         "ranger-apricot": "#B86F0A",
         "ranger-spice": "#A84E2A",
