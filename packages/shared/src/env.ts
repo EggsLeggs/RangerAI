@@ -1,8 +1,8 @@
 import { config } from "dotenv";
+import { readMcpPort } from "./mcp-port.js";
 
 config();
 
-const DEFAULT_MCP_PORT = 3001;
 const DEFAULT_WEBHOOK_URL = "http://localhost:3000/api/alerts";
 
 const REQUIRED_ENV_KEYS = [
@@ -44,22 +44,6 @@ function readOptionalEnv(key: OptionalEnvKey): string | undefined {
   return value;
 }
 
-function readPort(value: string | undefined): number {
-  const raw = value?.trim();
-  if (!raw) {
-    return DEFAULT_MCP_PORT;
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
-    throw new Error(
-      `invalid MCP_PORT "${raw}". expected an integer in range 1-65535.`
-    );
-  }
-
-  return parsed;
-}
-
 function readWebhookUrl(value: string | undefined): string {
   const raw = value?.trim();
   if (!raw) {
@@ -93,7 +77,7 @@ export const env = {
   IUCN_TOKEN: readRequiredEnv("IUCN_TOKEN"),
   OPENAI_API_KEY: readRequiredEnv("OPENAI_API_KEY"),
   CIVIC_API_KEY: readRequiredEnv("CIVIC_API_KEY"),
-  MCP_PORT: readPort(process.env.MCP_PORT),
+  MCP_PORT: readMcpPort(),
   TWILIO_ACCOUNT_SID: readOptionalEnv("TWILIO_ACCOUNT_SID"),
   TWILIO_AUTH_TOKEN: readOptionalEnv("TWILIO_AUTH_TOKEN"),
   TWILIO_FROM_NUMBER: readOptionalEnv("TWILIO_FROM_NUMBER"),

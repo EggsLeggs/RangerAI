@@ -16,6 +16,9 @@
       ],
       "@rangerwatch/shared/env": [
         "packages/shared/src/env.ts"
+      ],
+      "@rangerwatch/shared/mcp-port": [
+        "packages/shared/src/mcp-port.ts"
       ]
     }
   },

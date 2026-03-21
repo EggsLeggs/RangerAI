@@ -1,5 +1,5 @@
 import type { ClassifiedSighting, GuardrailResult } from "@rangerwatch/shared";
-import { env } from "@rangerwatch/shared/env";
+import { readMcpPort } from "@rangerwatch/shared/mcp-port";
 import { z } from "zod";
 
 const CIVIC_TIMEOUT_MS = 3000;
@@ -27,7 +27,7 @@ export async function inspectOutput(
 
   try {
     const response = await fetch(
-      `http://localhost:${env.MCP_PORT}/${TOOL_NAME}`,
+      `http://localhost:${readMcpPort()}/${TOOL_NAME}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +77,7 @@ export async function inspectOutput(
       output: "",
       blocked: false,
       reason: `civic-mcp unavailable: ${truncateBody(detail, 400)}`,
-      toolName: TOOL_NAME,
+      toolName: "inspect_output",
       timestamp,
     };
   }
