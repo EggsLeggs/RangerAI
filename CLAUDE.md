@@ -228,7 +228,7 @@ judging criteria: autonomy, usefulness, technical depth, creativity.
 judging criteria: what you shipped (does it work, is it polished), speed and ambition, how effectively AI tools were used in development, creativity of the idea.
 
 - the entire project is built using AI-assisted development - Claude Code for architecture and implementation, Cursor for iteration
-- track is explicitly about the process as much as the output - document AI usage throughout: prompts used, decisions made with AI, how fast we went from zero to shipped
+- track is explicitly about the process as much as the output - document AI usage throughout, including prompts used, decisions made with AI, and how fast we went from zero to shipped
 - this track does not require AI to be integrated within the application - being judged on the output of the build and how we got there
 - keep a brief dev log of notable AI-assisted moments to reference in the pitch deck
 
