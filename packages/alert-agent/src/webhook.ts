@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { env } from "@rangerwatch/shared/env";
-import type { Alert } from "@rangerwatch/shared";
+import type { AlertBoth, AlertWebhook } from "@rangerwatch/shared";
 import { alertEvents, ALERT_DISPATCHED } from "./events.js";
 
 const MAX_RETRIES = 3;
@@ -16,7 +16,7 @@ function getMcpPort(): number {
 }
 
 /** Returns true when the payload must be rejected (blocked by Civic). */
-async function inspectAlertPayload(alert: Alert): Promise<boolean> {
+async function inspectAlertPayload(alert: AlertWebhook | AlertBoth): Promise<boolean> {
   const observerNotes = alert.observerNotes ?? "";
   const payload = `species:${alert.species} notes:${observerNotes}`;
   try {
@@ -43,7 +43,7 @@ async function inspectAlertPayload(alert: Alert): Promise<boolean> {
   }
 }
 
-export async function dispatchWebhook(alert: Alert): Promise<boolean> {
+export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<boolean> {
   const url = env.WEBHOOK_URL;
   if (!url) {
     console.warn("[alert-agent] WEBHOOK_URL is not configured — skipping dispatch");
@@ -74,11 +74,18 @@ export async function dispatchWebhook(alert: Alert): Promise<boolean> {
       console.log(`[alert-agent] webhook attempt ${attempt} — status ${res.status}`);
 
       if (res.ok) {
-        alertEvents.emit(ALERT_DISPATCHED, {
-          type: ALERT_DISPATCHED,
-          payload: { alert, method: "webhook" },
-          timestamp: new Date(),
-        });
+        try {
+          alertEvents.emit(ALERT_DISPATCHED, {
+            type: ALERT_DISPATCHED,
+            payload: { alert, method: "webhook" },
+            timestamp: new Date(),
+          });
+        } catch (emitErr) {
+          const msg = emitErr instanceof Error ? emitErr.message : String(emitErr);
+          console.error(
+            `[alert-agent] ALERT_DISPATCHED listener error (webhook already succeeded): ${msg}`
+          );
+        }
         return true;
       }
     } catch (err) {

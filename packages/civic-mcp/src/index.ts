@@ -1,3 +1,10 @@
-// Public entrypoint for the civic-mcp package.
-// TODO: export civic MCP server bootstrap, tools, and shared types.
+import { readMcpPort } from "@rangerwatch/shared/mcp-port";
+import { startCivicMcpServer } from "./server.js";
 
+export { inspectPayloadForInjection } from "./injection.js";
+export { startCivicMcpServer } from "./server.js";
+
+if (import.meta.main) {
+  const port = readMcpPort();
+  startCivicMcpServer(port);
+}

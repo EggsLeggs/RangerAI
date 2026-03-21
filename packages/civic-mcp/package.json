@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
+  "dependencies": {
+    "@rangerwatch/shared": "workspace:*"
+  },
   "scripts": {
+    "start": "bun run src/index.ts",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
