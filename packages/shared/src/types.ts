@@ -40,13 +40,41 @@ export interface ScoredSighting extends ClassifiedSighting {
   inRange: boolean;
 }
 
-export type AlertDispatchMethod = "webhook" | "sms" | "both";
-
-export interface Alert extends ScoredSighting {
+/** Shared fields on every dispatched alert. */
+export type AlertBase = ScoredSighting & {
   alertId: string;
-  formattedMessage: string;
   dispatchedAt: Date;
-  dispatchMethod: AlertDispatchMethod;
+};
+
+export interface AlertSms extends AlertBase {
+  dispatchMethod: "sms";
+  formattedMessage: string;
+}
+
+export interface AlertWebhook extends AlertBase {
+  dispatchMethod: "webhook";
+  formattedMessage: string;
+}
+
+export interface AlertBoth extends AlertBase {
+  dispatchMethod: "both";
+  formattedMessage: { sms: string; webhook: string };
+}
+
+export type Alert = AlertSms | AlertWebhook | AlertBoth;
+
+export type AlertDispatchMethod = Alert["dispatchMethod"];
+
+export function isAlertSms(alert: Alert): alert is AlertSms {
+  return alert.dispatchMethod === "sms";
+}
+
+export function isAlertWebhook(alert: Alert): alert is AlertWebhook {
+  return alert.dispatchMethod === "webhook";
+}
+
+export function isAlertBoth(alert: Alert): alert is AlertBoth {
+  return alert.dispatchMethod === "both";
 }
 
 export interface GuardrailResult {
