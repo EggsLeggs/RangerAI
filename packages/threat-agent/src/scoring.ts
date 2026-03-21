@@ -5,11 +5,13 @@ export const WEIGHT_NOCTURNAL = 20;
 export const WEIGHT_ENDANGERED_SPECIES = 25;
 export const WEIGHT_INVASIVE_FIRST_APPEARANCE = 15;
 export const WEIGHT_HUMAN_CLUSTERING = 15;
+export const HUMAN_CLUSTER_THRESHOLD = 3;
 
 const CACHE_MAX_SIZE = 1000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const seenSpeciesCache = new Map<string, number>(); // key -> insertion timestamp
+const zoneSightingCounts = new Map<string, number>(); // zone key -> total sighting count
 
 function evictStale(): void {
   const now = Date.now();
@@ -44,6 +46,21 @@ export function hasSeen(species: string, lat: number, lng: number): boolean {
 export function markSeen(species: string, lat: number, lng: number): void {
   seenSpeciesCache.set(zoneKey(species, lat, lng), Date.now());
   evictStale();
+}
+
+// area key uses 0.1-degree grid cells (~11 km at the equator) to group
+// nearby sightings into zones for human-clustering detection
+export function areaKey(lat: number, lng: number): string {
+  return `${Math.round(lat * 10) / 10}:${Math.round(lng * 10) / 10}`;
+}
+
+export function getZoneSightingCount(lat: number, lng: number): number {
+  return zoneSightingCounts.get(areaKey(lat, lng)) ?? 0;
+}
+
+export function incrementZoneSightings(lat: number, lng: number): void {
+  const key = areaKey(lat, lng);
+  zoneSightingCounts.set(key, (zoneSightingCounts.get(key) ?? 0) + 1);
 }
 
 export function isNocturnal(observedAt: Date, lng: number): boolean {
