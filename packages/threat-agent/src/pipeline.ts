@@ -1,7 +1,14 @@
 import type { ClassifiedSighting, ScoredSighting } from "@rangerwatch/shared";
 import { lookupSpecies } from "./clients/iucn.js";
 import { validateRange } from "./range.js";
-import { scoreSighting, hasSeen, markSeen } from "./scoring.js";
+import {
+  scoreSighting,
+  hasSeen,
+  markSeen,
+  getZoneSightingCount,
+  incrementZoneSightings,
+  HUMAN_CLUSTER_THRESHOLD,
+} from "./scoring.js";
 import { classifyThreat } from "./classifier.js";
 
 export async function processSighting(
@@ -15,11 +22,14 @@ export async function processSighting(
   const previouslySeen = hasSeen(classified.species, classified.lat, classified.lng);
   markSeen(classified.species, classified.lat, classified.lng);
 
+  const humanClusterNearby = getZoneSightingCount(classified.lat, classified.lng) > HUMAN_CLUSTER_THRESHOLD;
+  incrementZoneSightings(classified.lat, classified.lng);
+
   const anomalyScore = scoreSighting(classified, {
     inRange,
     iucnStatus,
     previouslySeen,
-    humanClusterNearby: false,
+    humanClusterNearby,
   });
   const threatLevel = classifyThreat(anomalyScore, iucnStatus, inRange, classified.invasive);
 
