@@ -1,5 +1,5 @@
 {
-  "name": "@rangerwatch/vision-agent",
+  "name": "@rangerai/vision-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.47",
-    "@rangerwatch/shared": "workspace:*",
+    "@rangerai/shared": "workspace:*",
     "ai": "^6.0.133",
     "zod": "^4.3.6"
   }

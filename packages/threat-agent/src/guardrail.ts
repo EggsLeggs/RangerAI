@@ -1,5 +1,5 @@
-import type { GuardrailResult } from "@rangerwatch/shared";
-import { buildCivicHeaders } from "@rangerwatch/shared";
+import type { GuardrailResult } from "@rangerai/shared";
+import { buildCivicHeaders } from "@rangerai/shared";
 
 const CIVIC_TIMEOUT_MS = 3000;
 const GUARDED_FETCH_TIMEOUT_MS = 10_000;

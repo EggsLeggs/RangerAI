@@ -1,11 +1,11 @@
 {
-  "name": "@rangerwatch/threat-agent",
+  "name": "@rangerai/threat-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@rangerwatch/shared": "workspace:*"
+    "@rangerai/shared": "workspace:*"
   },
   "exports": {
     ".": {

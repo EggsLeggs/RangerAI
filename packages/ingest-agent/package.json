@@ -1,11 +1,11 @@
 {
-  "name": "@rangerwatch/ingest-agent",
+  "name": "@rangerai/ingest-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@rangerwatch/shared": "workspace:*",
+    "@rangerai/shared": "workspace:*",
     "node-cron": "^4.2.1"
   },
   "scripts": {

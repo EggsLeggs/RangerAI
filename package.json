@@ -1,12 +1,12 @@
 {
-  "name": "rangerwatch",
+  "name": "rangerai",
   "description": "autonomous wildlife monitoring that identifies species, detects threats, and alerts rangers in real time.",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.9",
   "repository": {
     "type": "git",
-    "url": "git@github.com:EggsLeggs/RangerWatch.git"
+    "url": "git@github.com:EggsLeggs/RangerAI.git"
   },
   "license": "MIT",
   "engines": {

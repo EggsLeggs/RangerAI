@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { AgentEvent } from "@rangerwatch/shared";
+import type { AgentEvent } from "@rangerai/shared";
 
 export const AGENT_NEW_SIGHTINGS = "agent:new-sightings" as const;
 

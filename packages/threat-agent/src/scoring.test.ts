@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import type { ClassifiedSighting } from "@rangerwatch/shared";
+import type { ClassifiedSighting } from "@rangerai/shared";
 import {
   scoreSighting,
   isNocturnal,

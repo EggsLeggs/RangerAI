@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { ThreatLevel } from "@rangerwatch/shared";
-import type { ScoredSighting } from "@rangerwatch/shared";
-import { isAlertBoth, isAlertWebhook } from "@rangerwatch/shared";
+import { ThreatLevel } from "@rangerai/shared";
+import type { ScoredSighting } from "@rangerai/shared";
+import { isAlertBoth, isAlertWebhook } from "@rangerai/shared";
 import { formatAlert } from "./formatter";
 
 const baseSighting: ScoredSighting = {
@@ -46,7 +46,7 @@ describe("formatAlert", () => {
     const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL });
     if (!isAlertBoth(alert)) throw new Error("expected AlertBoth");
     const msg = alert.formattedMessage;
-    expect(msg.webhook).toContain("RANGERWATCH ALERT");
+    expect(msg.webhook).toContain("RANGERAI ALERT");
     expect(msg.webhook).toContain("Species:");
   });
 
@@ -54,7 +54,7 @@ describe("formatAlert", () => {
     const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.INFO, anomalyScore: 10 });
     if (!isAlertWebhook(alert)) throw new Error("expected AlertWebhook");
     expect(typeof alert.formattedMessage).toBe("string");
-    expect(alert.formattedMessage).toContain("RANGERWATCH ALERT");
+    expect(alert.formattedMessage).toContain("RANGERAI ALERT");
     expect(alert.formattedMessage).toContain("Species:");
   });
 

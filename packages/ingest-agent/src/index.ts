@@ -1,4 +1,4 @@
-import type { BoundingBox } from "@rangerwatch/shared";
+import type { BoundingBox } from "@rangerai/shared";
 import { startPolling, stopPolling } from "./poller.js";
 
 export { ingestEvents } from "./events.js";

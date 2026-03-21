@@ -1,6 +1,6 @@
 # civic-mcp
 
-Local MCP server exposing Civic guardrail tools to the RangerWatch agent pipeline.
+Local MCP server exposing Civic guardrail tools to the RangerAI agent pipeline.
 
 Agents call this server via the MCP protocol (HTTP + JSON-RPC 2.0) before every
 external API call and before every downstream handoff.  The server sits between
@@ -10,9 +10,9 @@ agents, not beside them, so guardrails are auditable and independently replaceab
 
 ## How the hook framework is used
 
-Guardrail logic is implemented as a **Civic `AbstractHook` subclass** — the
+Guardrail logic is implemented as a **Civic `AbstractHook` subclass** - the
 `GuardrailHook` in `src/hook.ts`.  The hook framework is provided by
-`@civic/hook-common`; RangerWatch supplies the inspection rules inside it.
+`@civic/hook-common`; RangerAI supplies the inspection rules inside it.
 
 ### @civic/hook-common exports used
 
@@ -46,18 +46,17 @@ Agent                    civic-mcp server             GuardrailHook
   │◄── GuardrailResult ────────│                            │
 ```
 
-`processCallToolRequest` is the **input gate** — called before an agent passes
+`processCallToolRequest` is the **input gate** - called before an agent passes
 data to an external API.  Checks injection patterns and payload size only.
 
-`processCallToolResult` is the **output gate** — called before a result passes
+`processCallToolResult` is the **output gate** - called before a result passes
 downstream to the next agent.  Checks injection patterns, payload size, and PII
 (email addresses, phone numbers).
 
 Hook results use the `@civic/hook-common` discriminated union:
 
-- `{ resultType: "continue", request/response }` — payload is clean, pass through.
-- `{ resultType: "respond", response: { isError: true, content: [...reason] } }` —
-  payload is blocked; `runInspection` maps this to `GuardrailResult.blocked = true`.
+- `{ resultType: "continue", request/response }` - payload is clean, pass through.
+- `{ resultType: "respond", response: { isError: true, content: [...reason] } }` - payload is blocked; `runInspection` maps this to `GuardrailResult.blocked = true`.
 
 ### Endpoints
 
@@ -66,11 +65,11 @@ Hook results use the `@civic/hook-common` discriminated union:
 | `POST /inspect_input` | `processCallToolRequest` | injection + size |
 | `POST /inspect_output` | `processCallToolResult` | injection + size + PII |
 | `POST /tools/call` | derived from `params.name` | same routing as above |
-| `GET /audit_log` | — | returns session audit from `src/audit.ts` |
+| `GET /audit_log` | - | returns session audit from `src/audit.ts` |
 
 ---
 
-## Guardrail design — threat-agent
+## Guardrail design - threat-agent
 
 Two Civic inspection mechanisms exist in `packages/threat-agent` and they serve different purposes - they are never both called for the same operation. `inspectInputSpeciesName()` in `clients/iucn.ts` is an inline check specific to that client: it inspects the species name string before it is sent to the IUCN API, producing one audit log entry per lookup. `guardedFetch()` in `guardrail.ts` is a general-purpose fetch wrapper that inspects a URL before any arbitrary external call - exported but not currently wired into the IUCN path, available for new external API calls added to the threat-agent in the future.
 
@@ -95,23 +94,22 @@ is production-ready to implement.
 
 ### Rationale
 
-- The **ingest agent** only submits raw observation payloads before polling — it
+- The **ingest agent** only submits raw observation payloads before polling - it
   never reads model outputs, so it gets `inspect_input` only.
 - The **vision agent** submits GPT-4o outputs for PII and injection screening
-  before passing classifications downstream — `inspect_output` only.
+  before passing classifications downstream - `inspect_output` only.
 - The **threat agent** checks IUCN API inputs for injection before each external
-  call — `inspect_input` only.
+  call - `inspect_input` only.
 - The **alert agent** screens both incoming scored sightings and outgoing alert
-  bodies — `inspect_all`.
-- The **dashboard** reads audit counters for the guardrail strip UI —
-  `audit_read` only, no write access.
+  bodies - `inspect_all`.
+- The **dashboard** reads audit counters for the guardrail strip UI - `audit_read` only, no write access.
 
 This scope model means a compromised ingest-agent token cannot read audit logs
 or clear the output inspection path.
 
 ---
 
-## TODO — full OAuth 2 enforcement with @civic/auth-mcp
+## TODO - full OAuth 2 enforcement with @civic/auth-mcp
 
 `@civic/auth-mcp` is Civic's Express middleware for OAuth 2 / OIDC token
 verification on MCP servers.  Adding it to civic-mcp would enforce the scope
@@ -119,10 +117,10 @@ model above at the HTTP layer.
 
 Steps to implement post-hackathon:
 
-1. **Switch transport to Express** — `Bun.serve()` does not support Express
+1. **Switch transport to Express** - `Bun.serve()` does not support Express
    middleware.  Replace with `express()` + `@civic/auth-mcp`'s `auth()` middleware.
 
-2. **Register a Civic Auth client** — obtain a `clientId` at
+2. **Register a Civic Auth client** - obtain a `clientId` at
    [auth.civic.com](https://auth.civic.com) and configure it in `.env` as
    `CIVIC_CLIENT_ID`.
 
@@ -136,11 +134,11 @@ Steps to implement post-hackathon:
    // existing route handlers unchanged
    ```
 
-4. **Verify scopes per route** — in each route handler, check
+4. **Verify scopes per route** - in each route handler, check
    `req.auth.scopes.includes("civic:inspect_input")` etc. before calling
    `runInspection`.
 
-5. **Issue tokens to agents** — each agent process receives a scoped JWT from
+5. **Issue tokens to agents** - each agent process receives a scoped JWT from
    Civic Auth at startup and includes it as `Authorization: Bearer <token>` on
    every request to civic-mcp.
 

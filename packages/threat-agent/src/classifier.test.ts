@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ThreatLevel } from "@rangerwatch/shared";
+import { ThreatLevel } from "@rangerai/shared";
 import { classifyThreat } from "./classifier.js";
 
 describe("classifyThreat", () => {

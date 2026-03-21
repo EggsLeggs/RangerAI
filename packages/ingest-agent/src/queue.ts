@@ -1,4 +1,4 @@
-import type { Sighting, SightingSource } from "@rangerwatch/shared";
+import type { Sighting, SightingSource } from "@rangerai/shared";
 
 const MAX_CAPACITY = 500;
 

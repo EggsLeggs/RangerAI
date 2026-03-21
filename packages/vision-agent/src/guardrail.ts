@@ -1,6 +1,6 @@
-import type { ClassifiedSighting, GuardrailResult } from "@rangerwatch/shared";
-import { buildCivicHeaders } from "@rangerwatch/shared";
-import { readMcpPort } from "@rangerwatch/shared/mcp-port";
+import type { ClassifiedSighting, GuardrailResult } from "@rangerai/shared";
+import { buildCivicHeaders } from "@rangerai/shared";
+import { readMcpPort } from "@rangerai/shared/mcp-port";
 import { z } from "zod";
 
 const CIVIC_TIMEOUT_MS = 3000;

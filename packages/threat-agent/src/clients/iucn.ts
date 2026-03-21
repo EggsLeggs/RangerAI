@@ -3,8 +3,8 @@
 // throws at load time when it is absent, which would prevent the graceful
 // null-return path required by this client. Dotenv loading is the
 // responsibility of the app entry point.
-import type { BoundingBox } from "@rangerwatch/shared";
-import { buildCivicHeaders } from "@rangerwatch/shared";
+import type { BoundingBox } from "@rangerai/shared";
+import { buildCivicHeaders } from "@rangerai/shared";
 
 const BASE_URL = "https://api.iucnredlist.org/api/v4";
 
@@ -15,7 +15,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 200;
 
 // ---------------------------------------------------------------------------
-// Internal types — v4 API response shapes
+// Internal types - v4 API response shapes
 // The v4 OpenAPI spec has sparse schema definitions; types are derived from
 // documented fields + live response inspection. Unknown fields are typed as
 // [key: string]: unknown to satisfy strict mode without any.
@@ -92,7 +92,7 @@ interface IucnTaxaResponse {
 
 // GET /api/v4/assessment/{id}
 // The OpenAPI spec documents no properties beyond assessment_id.
-// countries_of_occurrence is inferred from IUCN website data — verified at
+// countries_of_occurrence is inferred from IUCN website data - verified at
 // runtime in the test script by logging the raw response.
 interface IucnAssessmentLocation {
   code: string;  // ISO alpha-2 country code
@@ -268,7 +268,7 @@ async function fetchIucnWithTimeout(
 
 // Split "Panthera leo" → { genus: "Panthera", epithet: "leo" }.
 // Handles trinomials ("Panthera leo leo") via optional infra field.
-// Returns null for single-word names — the v4 API requires both params.
+// Returns null for single-word names - the v4 API requires both params.
 function parseSpeciesName(name: string): { genus: string; epithet: string; infra?: string } | null {
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return null;
@@ -421,7 +421,7 @@ export async function lookupSpecies(speciesName: string): Promise<IucnSpeciesRes
 
   const token = getToken();
   if (!token) {
-    console.warn("[threat-agent] IUCN_TOKEN is not set — skipping IUCN lookup");
+    console.warn("[threat-agent] IUCN_TOKEN is not set - skipping IUCN lookup");
     return null;
   }
 

@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config(); // must run before any process.env reads
 
-import { readMcpPort } from "@rangerwatch/shared/mcp-port";
+import { readMcpPort } from "@rangerai/shared/mcp-port";
 import { initSdk } from "./inspect.js";
 import { startCivicMCP } from "./server.js";
 

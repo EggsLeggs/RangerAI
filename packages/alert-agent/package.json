@@ -1,5 +1,5 @@
 {
-  "name": "@rangerwatch/alert-agent",
+  "name": "@rangerai/alert-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",

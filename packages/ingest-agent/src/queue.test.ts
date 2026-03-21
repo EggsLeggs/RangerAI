@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { SightingQueue } from "./queue";
-import type { Sighting } from "@rangerwatch/shared";
+import type { Sighting } from "@rangerai/shared";
 
 function makeSighting(id: string, source: "inaturalist" | "gbif" = "inaturalist"): Sighting {
   return {

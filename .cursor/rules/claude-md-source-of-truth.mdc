@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Follow CLAUDE.md
 
-- Treat `CLAUDE.md` as the canonical project context for RangerWatch.
+- Treat `CLAUDE.md` as the canonical project context for RangerAI.
 - Use its architecture, milestones, stack, and coding conventions as defaults when making decisions.
 - If implementation details are ambiguous, align choices to `CLAUDE.md` before inventing new patterns.
 - Keep outputs concise and consistent with the project tone and conventions defined in `CLAUDE.md`.

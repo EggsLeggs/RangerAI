@@ -1,4 +1,4 @@
-import type { ClassifiedSighting } from "@rangerwatch/shared";
+import type { ClassifiedSighting } from "@rangerai/shared";
 
 export const WEIGHT_OUT_OF_RANGE = 40;
 export const WEIGHT_NOCTURNAL = 20;

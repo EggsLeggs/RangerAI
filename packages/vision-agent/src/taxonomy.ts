@@ -1,5 +1,5 @@
-import type { ClassifiedSighting } from "@rangerwatch/shared";
-import { env } from "@rangerwatch/shared/env";
+import type { ClassifiedSighting } from "@rangerai/shared";
+import { env } from "@rangerai/shared/env";
 
 interface InatTaxon {
   id: number;

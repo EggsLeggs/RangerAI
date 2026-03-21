@@ -1,5 +1,5 @@
 import cron, { type ScheduledTask } from "node-cron";
-import type { BoundingBox } from "@rangerwatch/shared";
+import type { BoundingBox } from "@rangerai/shared";
 import { fetchObservations } from "./clients/inaturalist.js";
 import { fetchOccurrences } from "./clients/gbif.js";
 import { defaultQueue } from "./queue.js";

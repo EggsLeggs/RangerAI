@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "rangerwatch",
+      "name": "rangerai",
       "devDependencies": {
         "@eslint/js": "^9.22.0",
         "@types/bun": "^1.3.11",
@@ -14,15 +14,15 @@
       },
     },
     "packages/alert-agent": {
-      "name": "@rangerwatch/alert-agent",
+      "name": "@rangerai/alert-agent",
       "version": "0.0.0",
     },
     "packages/civic-mcp": {
-      "name": "@rangerwatch/civic-mcp",
+      "name": "@rangerai/civic-mcp",
       "version": "0.0.0",
       "dependencies": {
         "@civic/hook-common": "^0.9.0",
-        "@rangerwatch/shared": "workspace:*",
+        "@rangerai/shared": "workspace:*",
         "dotenv": "^17.2.3",
         "jose": "^6.2.2",
       },
@@ -31,7 +31,7 @@
       },
     },
     "packages/dashboard": {
-      "name": "@rangerwatch/dashboard",
+      "name": "@rangerai/dashboard",
       "version": "0.0.0",
       "dependencies": {
         "next": "^16.0.0",
@@ -48,33 +48,33 @@
       },
     },
     "packages/ingest-agent": {
-      "name": "@rangerwatch/ingest-agent",
+      "name": "@rangerai/ingest-agent",
       "version": "0.0.0",
       "dependencies": {
-        "@rangerwatch/shared": "workspace:*",
+        "@rangerai/shared": "workspace:*",
         "node-cron": "^4.2.1",
       },
     },
     "packages/shared": {
-      "name": "@rangerwatch/shared",
+      "name": "@rangerai/shared",
       "version": "0.0.0",
       "dependencies": {
         "dotenv": "^17.2.3",
       },
     },
     "packages/threat-agent": {
-      "name": "@rangerwatch/threat-agent",
+      "name": "@rangerai/threat-agent",
       "version": "0.0.0",
       "dependencies": {
-        "@rangerwatch/shared": "workspace:*",
+        "@rangerai/shared": "workspace:*",
       },
     },
     "packages/vision-agent": {
-      "name": "@rangerwatch/vision-agent",
+      "name": "@rangerai/vision-agent",
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/openai": "^3.0.47",
-        "@rangerwatch/shared": "workspace:*",
+        "@rangerai/shared": "workspace:*",
         "ai": "^6.0.133",
         "zod": "^4.3.6",
       },
@@ -209,19 +209,19 @@
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
-    "@rangerwatch/alert-agent": ["@rangerwatch/alert-agent@workspace:packages/alert-agent"],
+    "@rangerai/alert-agent": ["@rangerai/alert-agent@workspace:packages/alert-agent"],
 
-    "@rangerwatch/civic-mcp": ["@rangerwatch/civic-mcp@workspace:packages/civic-mcp"],
+    "@rangerai/civic-mcp": ["@rangerai/civic-mcp@workspace:packages/civic-mcp"],
 
-    "@rangerwatch/dashboard": ["@rangerwatch/dashboard@workspace:packages/dashboard"],
+    "@rangerai/dashboard": ["@rangerai/dashboard@workspace:packages/dashboard"],
 
-    "@rangerwatch/ingest-agent": ["@rangerwatch/ingest-agent@workspace:packages/ingest-agent"],
+    "@rangerai/ingest-agent": ["@rangerai/ingest-agent@workspace:packages/ingest-agent"],
 
-    "@rangerwatch/shared": ["@rangerwatch/shared@workspace:packages/shared"],
+    "@rangerai/shared": ["@rangerai/shared@workspace:packages/shared"],
 
-    "@rangerwatch/threat-agent": ["@rangerwatch/threat-agent@workspace:packages/threat-agent"],
+    "@rangerai/threat-agent": ["@rangerai/threat-agent@workspace:packages/threat-agent"],
 
-    "@rangerwatch/vision-agent": ["@rangerwatch/vision-agent@workspace:packages/vision-agent"],
+    "@rangerai/vision-agent": ["@rangerai/vision-agent@workspace:packages/vision-agent"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

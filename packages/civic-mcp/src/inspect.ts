@@ -1,5 +1,5 @@
 import { LocalHookClient, type CallToolRequestWithContext, type CallToolResult, type RequestExtra } from "@civic/hook-common";
-import type { GuardrailResult } from "@rangerwatch/shared";
+import type { GuardrailResult } from "@rangerai/shared";
 import { GuardrailHook } from "./hook.js";
 
 let hookClient: LocalHookClient | null = null;
@@ -23,7 +23,7 @@ export async function initSdk(): Promise<void> {
 /**
  * Run a guardrail inspection via the @civic/hook-common hook pipeline.
  *
- * @param payload  - The string to inspect.
+ * @param payload - The string to inspect.
  * @param toolName - Downstream tool name (e.g. "iucn:lookupSpecies").
  *                   Falls back to the endpoint name when not supplied by caller.
  * @param endpoint - Which HTTP endpoint was called, determining the hook
@@ -45,7 +45,7 @@ export async function runInspection(
 
   try {
     if (!hookClient) {
-      throw new Error("hookClient not initialised — was initSdk() called?");
+      throw new Error("hookClient not initialised - was initSdk() called?");
     }
 
     // Build a minimal MCP CallToolRequest so the hook can operate on it.
@@ -62,7 +62,7 @@ export async function runInspection(
 
     if (endpoint === "inspect_input") {
       // ----------------------------------------------------------------
-      // Input gate — processCallToolRequest
+      // Input gate - processCallToolRequest
       // ----------------------------------------------------------------
       const result = await hookClient.processCallToolRequest(mcpRequest, requestExtra);
 
@@ -79,7 +79,7 @@ export async function runInspection(
       return { ...base, blocked: false };
     } else {
       // ----------------------------------------------------------------
-      // Output gate — processCallToolResult
+      // Output gate - processCallToolResult
       // ----------------------------------------------------------------
       const mcpResponse: CallToolResult = {
         content: [{ type: "text", text: payload }],
@@ -103,7 +103,7 @@ export async function runInspection(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[civic-mcp] inspection error — failing closed:", msg);
+    console.error("[civic-mcp] inspection error - failing closed:", msg);
     return { ...base, blocked: true, reason: `guardrail-error: ${msg}` };
   }
 }

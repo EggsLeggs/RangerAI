@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import type { BoundingBox, ClassifiedSighting } from "@rangerwatch/shared";
+import type { BoundingBox, ClassifiedSighting } from "@rangerai/shared";
 
 const mockGetRangeBounds = mock(async (_: string): Promise<BoundingBox | null> => null);
 

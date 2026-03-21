@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
-import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
+import type { Sighting, ClassifiedSighting } from "@rangerai/shared";
 import { CLASSIFICATION_SYSTEM_PROMPT } from "./prompt.js";
 
 const classificationSchema = z.object({

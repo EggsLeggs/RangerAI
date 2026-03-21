@@ -74,21 +74,21 @@ function blockedCallToolResult(reason: string): CallToolResult {
 // ---------------------------------------------------------------------------
 
 /**
- * RangerWatch guardrail hook built on @civic/hook-common's AbstractHook.
+ * RangerAI guardrail hook built on @civic/hook-common's AbstractHook.
  *
- * Civic provides the MCP hook framework — the middleware contract,
+ * Civic provides the MCP hook framework - the middleware contract,
  * request/response lifecycle, and LocalHookClient wiring.
- * RangerWatch provides the inspection rules inside the hook methods.
+ * RangerAI provides the inspection rules inside the hook methods.
  *
- * processCallToolRequest — input gate (injection + size)
- * processCallToolResult  — output gate (injection + size + PII)
+ * processCallToolRequest - input gate (injection + size)
+ * processCallToolResult - output gate (injection + size + PII)
  *
  * A `resultType: "respond"` with `isError: true` signals a blocked payload.
  * A `resultType: "continue"` passes the payload downstream unchanged.
  */
 export class GuardrailHook extends AbstractHook {
   override get name(): string {
-    return "rangerwatch-guardrail";
+    return "rangerai-guardrail";
   }
 
   /**
@@ -101,7 +101,7 @@ export class GuardrailHook extends AbstractHook {
   ): Promise<CallToolRequestHookResult> {
     const raw = request.params.arguments?.["payload"];
     if (typeof raw !== "string") {
-      // No payload argument — nothing to inspect, pass through.
+      // No payload argument - nothing to inspect, pass through.
       return { resultType: "continue", request };
     }
 
@@ -134,7 +134,7 @@ export class GuardrailHook extends AbstractHook {
     const payload = first !== undefined && first.type === "text" ? first.text : null;
 
     if (payload === null) {
-      // Non-text content — nothing to inspect textually, pass through.
+      // Non-text content - nothing to inspect textually, pass through.
       return { resultType: "continue", response };
     }
 

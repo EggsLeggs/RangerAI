@@ -1,4 +1,4 @@
-import { Alert, AlertDispatchMethod, ScoredSighting, ThreatLevel } from "@rangerwatch/shared";
+import { Alert, AlertDispatchMethod, ScoredSighting, ThreatLevel } from "@rangerai/shared";
 
 function formatCoord(n: number): string {
   return n.toFixed(4);
@@ -33,7 +33,7 @@ function buildSmsMessage(sighting: ScoredSighting): string {
 
 function buildWebhookMessage(sighting: ScoredSighting): string {
   return (
-    `RANGERWATCH ALERT [${sighting.threatLevel}]\n` +
+    `RANGERAI ALERT [${sighting.threatLevel}]\n` +
     `Species: ${sighting.species} (${sighting.iucnStatus})\n` +
     `Location: ${formatCoord(sighting.lat)}, ${formatCoord(sighting.lng)}\n` +
     `Observed: ${sighting.observedAt.toISOString()}\n` +

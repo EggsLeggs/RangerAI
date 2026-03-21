@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import type { GuardrailResult } from "@rangerwatch/shared";
+import type { GuardrailResult } from "@rangerai/shared";
 import { logEntry, getAuditLog } from "./audit.js";
 import { runInspection } from "./inspect.js";
 
@@ -16,13 +16,13 @@ interface JsonRpcRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Civic Auth — JWT verification via hosted JWKS
+// Civic Auth - JWT verification via hosted JWKS
 // ---------------------------------------------------------------------------
 
 const CIVIC_JWKS_URL = "https://auth.civic.com/oauth/jwks";
 const CIVIC_ISSUER = "https://auth.civic.com/oauth/";
 
-// Lazily created — only initialised when CIVIC_CLIENT_ID is present.
+// Lazily created - only initialised when CIVIC_CLIENT_ID is present.
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 function getJwks(): ReturnType<typeof createRemoteJWKSet> {
@@ -155,7 +155,7 @@ export function startCivicMCP(port: number): void {
         });
       }
 
-      // Bearer token validation — enforced when CIVIC_CLIENT_ID is configured.
+      // Bearer token validation - enforced when CIVIC_CLIENT_ID is configured.
       if (authActive) {
         const valid = await verifyBearerToken(req.headers.get("Authorization"));
         if (!valid) return unauthorizedResponse();
@@ -185,6 +185,6 @@ export function startCivicMCP(port: number): void {
   });
 
   console.log(
-    `[civic-mcp] server listening on port ${port}${authActive ? " (Civic Auth enabled)" : " (no auth — set CIVIC_CLIENT_ID to enable)"}`
+    `[civic-mcp] server listening on port ${port}${authActive ? " (Civic Auth enabled)" : " (no auth - set CIVIC_CLIENT_ID to enable)"}`
   );
 }

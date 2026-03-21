@@ -1,4 +1,4 @@
-import type { GuardrailResult } from "@rangerwatch/shared";
+import type { GuardrailResult } from "@rangerai/shared";
 
 const MAX_ENTRIES = 1000;
 const log: GuardrailResult[] = [];

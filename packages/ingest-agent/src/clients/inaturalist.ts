@@ -1,5 +1,5 @@
-import type { BoundingBox, Sighting } from "@rangerwatch/shared";
-import { env } from "@rangerwatch/shared/env";
+import type { BoundingBox, Sighting } from "@rangerai/shared";
+import { env } from "@rangerai/shared/env";
 
 const BASE_URL = "https://api.inaturalist.org/v1";
 const PER_PAGE = 200;
@@ -63,7 +63,7 @@ function mapObservationToSighting(obs: InatObservation): Sighting | null {
 export async function fetchObservations(boundingBox: BoundingBox): Promise<Sighting[]> {
   if (!env.INATURALIST_API_KEY) {
     console.warn(
-      "[ingest-agent] INATURALIST_API_KEY not set — proceeding unauthenticated (lower rate limits apply)"
+      "[ingest-agent] INATURALIST_API_KEY not set - proceeding unauthenticated (lower rate limits apply)"
     );
   }
 
@@ -96,7 +96,7 @@ export async function fetchObservations(boundingBox: BoundingBox): Promise<Sight
 
     if (!response.ok) {
       console.error(
-        `[ingest-agent] iNaturalist returned ${response.status} on page ${page} — aborting pagination`
+        `[ingest-agent] iNaturalist returned ${response.status} on page ${page} - aborting pagination`
       );
       return sightings;
     }

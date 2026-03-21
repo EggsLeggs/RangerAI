@@ -1,4 +1,4 @@
-import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
+import type { Sighting, ClassifiedSighting } from "@rangerai/shared";
 import { classifySighting } from "./classify.js";
 import { attachTaxon } from "./taxonomy.js";
 import { applyThreshold } from "./router.js";

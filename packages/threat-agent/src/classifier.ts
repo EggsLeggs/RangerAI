@@ -1,4 +1,4 @@
-import { ThreatLevel } from "@rangerwatch/shared";
+import { ThreatLevel } from "@rangerai/shared";
 
 export function classifyThreat(
   score: number,

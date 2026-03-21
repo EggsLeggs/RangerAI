@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { env } from "@rangerwatch/shared/env";
-import { buildCivicHeaders } from "@rangerwatch/shared";
-import type { AlertBoth, AlertWebhook } from "@rangerwatch/shared";
+import { env } from "@rangerai/shared/env";
+import { buildCivicHeaders } from "@rangerai/shared";
+import type { AlertBoth, AlertWebhook } from "@rangerai/shared";
 import { alertEvents, ALERT_DISPATCHED } from "./events.js";
 
 const MAX_RETRIES = 3;
@@ -32,7 +32,7 @@ async function inspectAlertPayload(alert: AlertWebhook | AlertBoth): Promise<boo
 export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<boolean> {
   const url = env.WEBHOOK_URL;
   if (!url) {
-    console.warn("[alert-agent] WEBHOOK_URL is not configured — skipping dispatch");
+    console.warn("[alert-agent] WEBHOOK_URL is not configured - skipping dispatch");
     return false;
   }
 
@@ -46,7 +46,7 @@ export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[alert-agent] webhook attempt ${attempt} — idempotency-key ${idempotencyKey}`);
+      console.log(`[alert-agent] webhook attempt ${attempt} - idempotency-key ${idempotencyKey}`);
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -57,7 +57,7 @@ export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
 
-      console.log(`[alert-agent] webhook attempt ${attempt} — status ${res.status}`);
+      console.log(`[alert-agent] webhook attempt ${attempt} - status ${res.status}`);
 
       if (res.ok) {
         try {
@@ -76,7 +76,7 @@ export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.log(`[alert-agent] webhook attempt ${attempt} — error: ${message}`);
+      console.log(`[alert-agent] webhook attempt ${attempt} - error: ${message}`);
     }
 
     if (attempt < MAX_RETRIES) {
@@ -84,6 +84,6 @@ export async function dispatchWebhook(alert: AlertWebhook | AlertBoth): Promise<
     }
   }
 
-  console.warn(`[alert-agent] webhook dispatch failed after ${MAX_RETRIES} attempts — alert ${alert.alertId} not delivered`);
+  console.warn(`[alert-agent] webhook dispatch failed after ${MAX_RETRIES} attempts - alert ${alert.alertId} not delivered`);
   return false;
 }

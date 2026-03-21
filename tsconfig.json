@@ -11,13 +11,13 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@rangerwatch/shared": [
+      "@rangerai/shared": [
         "packages/shared/src/index.ts"
       ],
-      "@rangerwatch/shared/env": [
+      "@rangerai/shared/env": [
         "packages/shared/src/env.ts"
       ],
-      "@rangerwatch/shared/mcp-port": [
+      "@rangerai/shared/mcp-port": [
         "packages/shared/src/mcp-port.ts"
       ]
     }

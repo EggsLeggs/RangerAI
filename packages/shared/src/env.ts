@@ -28,7 +28,7 @@ function readRequiredEnv(key: RequiredEnvKey): string {
   if (!value) {
     throw new Error(
       `missing required environment variable: ${key}. ` +
-        "set it in your local .env file before starting RangerWatch."
+        "set it in your local .env file before starting RangerAI."
     );
   }
 
@@ -66,7 +66,7 @@ export function validateRequiredEnv(): void {
   if (missing.length > 0) {
     throw new Error(
       `missing required environment variables: ${missing.join(", ")}. ` +
-        "set them in your local .env file before starting RangerWatch."
+        "set them in your local .env file before starting RangerAI."
     );
   }
 }

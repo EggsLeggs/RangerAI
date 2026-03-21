@@ -13,8 +13,8 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "RangerWatch Dashboard",
-  description: "RangerWatch monitoring dashboard"
+  title: "RangerAI Dashboard",
+  description: "RangerAI monitoring dashboard"
 };
 
 type RootLayoutProps = {

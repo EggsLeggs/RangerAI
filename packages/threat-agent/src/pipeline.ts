@@ -1,4 +1,4 @@
-import type { ClassifiedSighting, ScoredSighting } from "@rangerwatch/shared";
+import type { ClassifiedSighting, ScoredSighting } from "@rangerai/shared";
 import { lookupSpecies } from "./clients/iucn.js";
 import { validateRange } from "./range.js";
 import {

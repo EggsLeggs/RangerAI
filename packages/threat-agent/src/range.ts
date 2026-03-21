@@ -1,4 +1,4 @@
-import type { BoundingBox, ClassifiedSighting } from "@rangerwatch/shared";
+import type { BoundingBox, ClassifiedSighting } from "@rangerai/shared";
 import { getRangeBounds } from "./clients/iucn.js";
 
 /**
@@ -16,8 +16,7 @@ export function isInRange(sighting: ClassifiedSighting, bounds: BoundingBox): bo
 
 /**
  * Fetches range bounds for the sighting's species and checks containment.
- * Returns { inRange: true, bounds: null } when range data is unavailable -
- * errors on the side of not raising false alarms.
+ * Returns { inRange: true, bounds: null } when range data is unavailable - errors on the side of not raising false alarms.
  */
 export async function validateRange(
   sighting: ClassifiedSighting

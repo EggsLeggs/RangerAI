@@ -1,5 +1,5 @@
 {
-  "name": "@rangerwatch/civic-mcp",
+  "name": "@rangerai/civic-mcp",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@civic/hook-common": "^0.9.0",
-    "@rangerwatch/shared": "workspace:*",
+    "@rangerai/shared": "workspace:*",
     "dotenv": "^17.2.3",
     "jose": "^6.2.2"
   },

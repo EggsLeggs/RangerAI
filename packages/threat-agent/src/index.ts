@@ -1,4 +1,4 @@
-import type { ScoredSighting } from "@rangerwatch/shared";
+import type { ScoredSighting } from "@rangerai/shared";
 import { threatEvents } from "./events.js";
 import { processSighting } from "./pipeline.js";
 import { guardedFetch } from "./guardrail.js";

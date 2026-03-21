@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
-import type { Sighting, ClassifiedSighting } from "@rangerwatch/shared";
+import type { Sighting, ClassifiedSighting } from "@rangerai/shared";
 
 const baseSighting: Sighting = {
   id: "test-1",
