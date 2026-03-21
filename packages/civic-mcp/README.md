@@ -70,6 +70,14 @@ Hook results use the `@civic/hook-common` discriminated union:
 
 ---
 
+## Guardrail design — threat-agent
+
+Two Civic inspection mechanisms exist in `packages/threat-agent` and they serve different purposes - they are never both called for the same operation. `inspectInputSpeciesName()` in `clients/iucn.ts` is an inline check specific to that client: it inspects the species name string before it is sent to the IUCN API, producing one audit log entry per lookup. `guardedFetch()` in `guardrail.ts` is a general-purpose fetch wrapper that inspects a URL before any arbitrary external call - exported but not currently wired into the IUCN path, available for new external API calls added to the threat-agent in the future.
+
+`pipeline.ts` calls `lookupSpecies()` directly, which triggers the inline species-name check once. The audit log will show one entry per IUCN lookup, not two. This is intentional - not a redundancy.
+
+---
+
 ## OAuth 2 scope design
 
 This section documents the **intended** access-control model for the Civic

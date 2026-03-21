@@ -24,6 +24,7 @@
         "@civic/hook-common": "^0.9.0",
         "@rangerwatch/shared": "workspace:*",
         "dotenv": "^17.2.3",
+        "jose": "^6.2.2",
       },
       "devDependencies": {
         "@types/bun": "^1.3.11",

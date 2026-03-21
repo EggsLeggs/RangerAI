@@ -1,4 +1,5 @@
 import type { ClassifiedSighting, GuardrailResult } from "@rangerwatch/shared";
+import { buildCivicHeaders } from "@rangerwatch/shared";
 import { readMcpPort } from "@rangerwatch/shared/mcp-port";
 import { z } from "zod";
 
@@ -31,7 +32,7 @@ export async function inspectOutput(
       `http://localhost:${mcpPort}/${TOOL_NAME}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await buildCivicHeaders(),
         body: JSON.stringify({ payload }),
         signal: AbortSignal.timeout(CIVIC_TIMEOUT_MS),
       }
@@ -73,6 +74,9 @@ export async function inspectOutput(
     console.warn(
       `[vision-agent] civic-mcp unavailable for sighting ${classified.id} (${detail}); proceeding without guardrail`
     );
+    // Intentional fail-open: civic-mcp unavailability must not block the
+    // vision pipeline. blocked: false lets the classification pass downstream;
+    // the reason field records the failure for audit purposes.
     return {
       input: payload,
       output: "",

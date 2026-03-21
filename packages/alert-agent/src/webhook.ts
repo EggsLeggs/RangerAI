@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { env } from "@rangerwatch/shared/env";
+import { buildCivicHeaders } from "@rangerwatch/shared";
 import type { AlertBoth, AlertWebhook } from "@rangerwatch/shared";
 import { alertEvents, ALERT_DISPATCHED } from "./events.js";
 
@@ -13,28 +14,15 @@ async function inspectAlertPayload(alert: AlertWebhook | AlertBoth): Promise<boo
   const observerNotes = alert.observerNotes ?? "";
   const payload = `species:${alert.species} notes:${observerNotes}`;
   try {
-    const response = await fetch(`http://localhost:${env.MCP_PORT}/tools/call`, {
+    const response = await fetch(`http://localhost:${env.MCP_PORT}/inspect_input`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "inspect_input",
-          arguments: { payload },
-        },
-      }),
+      headers: await buildCivicHeaders(),
+      body: JSON.stringify({ payload, toolName: "alert:dispatch" }),
       signal: AbortSignal.timeout(CIVIC_TIMEOUT_MS),
     });
     if (!response.ok) return false;
-    const result = (await response.json()) as {
-      jsonrpc: "2.0";
-      id: string | number | null;
-      result?: { blocked?: boolean };
-      error?: unknown;
-    };
-    return result.result?.blocked === true;
+    const result = (await response.json()) as { blocked?: boolean };
+    return result.blocked === true;
   } catch {
     console.warn("[alert-agent] civic-mcp inspect_input unavailable; proceeding without guardrail");
     return false;

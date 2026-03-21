@@ -4,6 +4,7 @@
 // null-return path required by this client. Dotenv loading is the
 // responsibility of the app entry point.
 import type { BoundingBox } from "@rangerwatch/shared";
+import { buildCivicHeaders } from "@rangerwatch/shared";
 
 const BASE_URL = "https://api.iucnredlist.org/api/v4";
 
@@ -220,25 +221,18 @@ function authHeaders(token: string): Record<string, string> {
 /** Returns true when the payload must be rejected (blocked by Civic). */
 async function inspectInputSpeciesName(speciesName: string): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:${getMcpPort()}/tools/call`, {
+    const response = await fetch(`http://localhost:${getMcpPort()}/inspect_input`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await buildCivicHeaders(),
       body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "inspect_input",
-          arguments: { payload: speciesName },
-        },
+        payload: speciesName,
+        toolName: "iucn:lookupSpecies",
       }),
       signal: AbortSignal.timeout(CIVIC_TIMEOUT_MS),
     });
     if (!response.ok) return false;
-    const result = (await response.json()) as {
-      result?: { blocked?: boolean };
-    };
-    return result.result?.blocked === true;
+    const result = (await response.json()) as { blocked?: boolean };
+    return result.blocked === true;
   } catch {
     console.warn(
       "[threat-agent] civic-mcp inspect_input unavailable; proceeding without guardrail"

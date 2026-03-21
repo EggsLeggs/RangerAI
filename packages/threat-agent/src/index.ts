@@ -1,9 +1,11 @@
 import type { ScoredSighting } from "@rangerwatch/shared";
 import { threatEvents } from "./events.js";
 import { processSighting } from "./pipeline.js";
+import { guardedFetch } from "./guardrail.js";
 
 export { threatEvents };
 export { processSighting };
+export { guardedFetch };
 
 threatEvents.on("agent:classified-sightings", async (event) => {
   const scored: ScoredSighting[] = [];
