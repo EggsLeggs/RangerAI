@@ -259,6 +259,7 @@ problem → live iNaturalist data → alert firing on map → Civic strip showin
 ## coding conventions
 
 - lowercase commit messages
+- no `Co-Authored-By: Claude` trailer in commit messages
 - typescript throughout, strict mode
 - discriminated unions and type guards preferred over class hierarchies
 - prefer hyphens over em-dashes in comments/docs

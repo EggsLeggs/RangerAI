@@ -96,4 +96,15 @@ export interface NewSightingsEvent {
   timestamp: Date;
 }
 
-export type AgentEvent = NewSightingsEvent;
+export interface AlertDispatchedPayload {
+  alert: Alert;
+  method: "webhook";
+}
+
+export interface AlertDispatchedEvent {
+  type: "alert:dispatched";
+  payload: AlertDispatchedPayload;
+  timestamp: Date;
+}
+
+export type AgentEvent = NewSightingsEvent | AlertDispatchedEvent;

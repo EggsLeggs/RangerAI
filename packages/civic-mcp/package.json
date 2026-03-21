@@ -5,6 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
+    "start": "bun run src/index.ts",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
