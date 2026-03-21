@@ -19,6 +19,9 @@
     "packages/civic-mcp": {
       "name": "@rangerwatch/civic-mcp",
       "version": "0.0.0",
+      "dependencies": {
+        "@rangerwatch/shared": "workspace:*",
+      },
     },
     "packages/dashboard": {
       "name": "@rangerwatch/dashboard",
