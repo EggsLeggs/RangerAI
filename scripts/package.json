@@ -1,0 +1,14 @@
+{
+  "name": "@rangerai/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rangerai/civic-mcp": "workspace:*",
+    "@rangerai/ingest-agent": "workspace:*",
+    "@rangerai/vision-agent": "workspace:*",
+    "@rangerai/threat-agent": "workspace:*",
+    "@rangerai/alert-agent": "workspace:*",
+    "@rangerai/shared": "workspace:*"
+  }
+}

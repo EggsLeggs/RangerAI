@@ -118,7 +118,7 @@ export interface ScoredSightingsEvent {
 
 export interface AlertDispatchedPayload {
   alert: Alert;
-  method: "webhook" | "sms";
+  method: "webhook" | "sms" | "email";
 }
 
 export interface AlertDispatchedEvent {

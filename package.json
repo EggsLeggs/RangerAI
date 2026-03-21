@@ -19,7 +19,8 @@
     "packages/threat-agent",
     "packages/alert-agent",
     "packages/civic-mcp",
-    "packages/dashboard"
+    "packages/dashboard",
+    "scripts"
   ],
   "scripts": {
     "bootstrap": "bun install",

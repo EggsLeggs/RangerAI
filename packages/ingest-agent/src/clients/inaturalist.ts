@@ -71,10 +71,11 @@ export async function fetchObservations(boundingBox: BoundingBox): Promise<Sight
     ? { Authorization: `Bearer ${env.INATURALIST_API_KEY}` }
     : {};
 
+  const maxResults = env.INATURALIST_MAX_RESULTS;
   const sightings: Sighting[] = [];
   let page = 1;
 
-  while (true) {
+  while (sightings.length < maxResults) {
     const params = new URLSearchParams({
       quality_grade: "research",
       photos: "true",
@@ -104,11 +105,12 @@ export async function fetchObservations(boundingBox: BoundingBox): Promise<Sight
     const body = (await response.json()) as InatResponse;
 
     for (const obs of body.results) {
+      if (sightings.length >= maxResults) break;
       const sighting = mapObservationToSighting(obs);
       if (sighting !== null) sightings.push(sighting);
     }
 
-    if (body.results.length < PER_PAGE) break;
+    if (body.results.length < PER_PAGE || sightings.length >= maxResults) break;
     page += 1;
   }
 

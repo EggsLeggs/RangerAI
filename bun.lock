@@ -86,6 +86,18 @@
         "zod": "^4.3.6",
       },
     },
+    "scripts": {
+      "name": "@rangerai/scripts",
+      "version": "0.0.0",
+      "dependencies": {
+        "@rangerai/alert-agent": "workspace:*",
+        "@rangerai/civic-mcp": "workspace:*",
+        "@rangerai/ingest-agent": "workspace:*",
+        "@rangerai/shared": "workspace:*",
+        "@rangerai/threat-agent": "workspace:*",
+        "@rangerai/vision-agent": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.77", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-UdwIG2H2YMuntJQ5L+EmED5XiwnlvDT3HOmKfVFxR4Nq/RSLFA/HcchhwfNXHZ5UJjyuL2VO0huLbWSZ9ijemQ=="],
@@ -223,6 +235,8 @@
     "@rangerai/dashboard": ["@rangerai/dashboard@workspace:packages/dashboard"],
 
     "@rangerai/ingest-agent": ["@rangerai/ingest-agent@workspace:packages/ingest-agent"],
+
+    "@rangerai/scripts": ["@rangerai/scripts@workspace:scripts"],
 
     "@rangerai/shared": ["@rangerai/shared@workspace:packages/shared"],
 
