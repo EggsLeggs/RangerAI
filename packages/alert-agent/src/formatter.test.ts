@@ -32,8 +32,56 @@ describe("formatAlert", () => {
     expect(alert.dispatchMethod).toBe("webhook");
   });
 
-  it("SMS message (CRITICAL formattedMessage) is under 160 characters", () => {
+  it("CRITICAL formattedMessage contains SMS template for sms field", () => {
     const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL });
-    expect(alert.formattedMessage.length).toBeLessThan(160);
+    const msg = alert.formattedMessage as { sms: string; webhook: string };
+    expect(typeof msg).toBe("object");
+    expect(msg.sms).toContain("CRITICAL:");
+    expect(msg.sms).toContain("Immediate review required.");
+  });
+
+  it("CRITICAL formattedMessage contains webhook template for webhook field", () => {
+    const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL });
+    const msg = alert.formattedMessage as { sms: string; webhook: string };
+    expect(msg.webhook).toContain("RANGERWATCH ALERT");
+    expect(msg.webhook).toContain("Species:");
+  });
+
+  it("INFO formattedMessage is a webhook template string", () => {
+    const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.INFO, anomalyScore: 10 });
+    expect(typeof alert.formattedMessage).toBe("string");
+    expect(alert.formattedMessage as string).toContain("RANGERWATCH ALERT");
+    expect(alert.formattedMessage as string).toContain("Species:");
+  });
+
+  it("SMS message (CRITICAL sms field) is under 160 characters", () => {
+    const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL });
+    const sms = (alert.formattedMessage as { sms: string }).sms;
+    expect(sms.length).toBeLessThan(160);
+  });
+
+  it("SMS message is under 160 characters with long species and status strings", () => {
+    const longSighting: ScoredSighting = {
+      ...baseSighting,
+      threatLevel: ThreatLevel.CRITICAL,
+      species: "Balaenoptera musculus subspecies brevicauda",
+      iucnStatus: "Endangered (EN)",
+    };
+    const alert = formatAlert(longSighting);
+    const sms = (alert.formattedMessage as { sms: string }).sms;
+    expect(sms.length).toBeLessThan(160);
+  });
+
+  it("CRITICAL out-of-range sighting uses 'sighted out of range at' phrasing", () => {
+    const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL, inRange: false });
+    const sms = (alert.formattedMessage as { sms: string }).sms;
+    expect(sms).toContain("sighted out of range at");
+  });
+
+  it("CRITICAL in-range sighting uses neutral 'detected at' phrasing", () => {
+    const alert = formatAlert({ ...baseSighting, threatLevel: ThreatLevel.CRITICAL, inRange: true });
+    const sms = (alert.formattedMessage as { sms: string }).sms;
+    expect(sms).toContain("detected at");
+    expect(sms).not.toContain("out of range");
   });
 });

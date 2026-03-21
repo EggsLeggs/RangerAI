@@ -44,7 +44,7 @@ export type AlertDispatchMethod = "webhook" | "sms" | "both";
 
 export interface Alert extends ScoredSighting {
   alertId: string;
-  formattedMessage: string;
+  formattedMessage: string | { sms: string; webhook: string };
   dispatchedAt: Date;
   dispatchMethod: AlertDispatchMethod;
 }

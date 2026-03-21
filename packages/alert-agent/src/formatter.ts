@@ -22,8 +22,9 @@ function dispatchMethodFor(threatLevel: ThreatLevel): AlertDispatchMethod {
 }
 
 function buildSmsMessage(sighting: ScoredSighting): string {
+  const locationVerb = sighting.inRange ? "detected at" : "sighted out of range at";
   return (
-    `CRITICAL: ${sighting.species} sighted out of range at ` +
+    `CRITICAL: ${sighting.species} ${locationVerb} ` +
     `${formatCoord(sighting.lat)},${formatCoord(sighting.lng)}. ` +
     `IUCN: ${sighting.iucnStatus} score:${sighting.anomalyScore}. ` +
     `Immediate review required.`
@@ -45,9 +46,10 @@ function buildWebhookMessage(sighting: ScoredSighting): string {
 }
 
 export function formatAlert(sighting: ScoredSighting): Alert {
+  const dispatchMethod = dispatchMethodFor(sighting.threatLevel);
   const formattedMessage =
-    sighting.threatLevel === ThreatLevel.CRITICAL
-      ? buildSmsMessage(sighting)
+    dispatchMethod === "both"
+      ? { sms: buildSmsMessage(sighting), webhook: buildWebhookMessage(sighting) }
       : buildWebhookMessage(sighting);
 
   return {
@@ -55,6 +57,6 @@ export function formatAlert(sighting: ScoredSighting): Alert {
     alertId: crypto.randomUUID(),
     formattedMessage,
     dispatchedAt: new Date(),
-    dispatchMethod: dispatchMethodFor(sighting.threatLevel),
+    dispatchMethod,
   };
 }
