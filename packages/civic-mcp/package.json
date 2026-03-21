@@ -10,5 +10,13 @@
     "test": "bun test",
     "build": "tsc --outDir dist",
     "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@civic/hook-common": "^0.9.0",
+    "@rangerwatch/shared": "workspace:*",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11"
   }
 }
