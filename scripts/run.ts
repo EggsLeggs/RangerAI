@@ -9,6 +9,7 @@ import { processSighting as visionProcess } from "@rangerai/vision-agent";
 import { processSighting as threatProcess } from "@rangerai/threat-agent";
 import { dispatchAlert, generateReport } from "@rangerai/alert-agent";
 import type { ClassifiedSighting, ScoredSighting } from "@rangerai/shared";
+import { basename } from "node:path";
 
 // ── monitoring state ───────────────────────────────────────────────────────
 
@@ -501,7 +502,7 @@ Bun.serve({
     }
 
     if (pathname.startsWith("/reports/")) {
-      const filename = pathname.slice("/reports/".length);
+      const filename = basename(pathname.slice("/reports/".length));
       const filePath = `${import.meta.dir}/../reports/${filename}`;
       const file = Bun.file(filePath);
       if (!(await file.exists())) {

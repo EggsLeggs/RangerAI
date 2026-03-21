@@ -3,14 +3,6 @@ import { env } from "@rangerai/shared/env";
 
 const BASE_URL = "https://api.inaturalist.org/v1";
 const PER_PAGE = 200;
-const DEFAULT_MAX_RESULTS = 200;
-
-function readMaxResults(): number {
-  const raw = process.env.INATURALIST_MAX_RESULTS?.trim();
-  if (!raw) return DEFAULT_MAX_RESULTS;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_RESULTS;
-}
 
 interface InatPhoto {
   id: number;
@@ -79,7 +71,7 @@ export async function fetchObservations(boundingBox: BoundingBox): Promise<Sight
     ? { Authorization: `Bearer ${env.INATURALIST_API_KEY}` }
     : {};
 
-  const maxResults = readMaxResults();
+  const maxResults = env.INATURALIST_MAX_RESULTS;
   const sightings: Sighting[] = [];
   let page = 1;
 

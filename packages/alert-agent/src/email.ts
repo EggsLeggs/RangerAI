@@ -169,7 +169,7 @@ export async function dispatchEmail(alert: Alert): Promise<boolean> {
     console.log(`[alert-agent] email dispatched via Resend to ${to}`);
     alertEvents.emit(ALERT_DISPATCHED, {
       type: "alert:dispatched",
-      payload: { alert, method: "sms" },
+      payload: { alert, method: "email" },
       timestamp: new Date(),
     });
 
