@@ -73,7 +73,7 @@ export async function guardedFetch(
   const requestPayload = JSON.stringify({
     url,
     method: options?.method ?? "GET",
-    headers: options?.headers ?? {},
+    headers: Object.fromEntries(new Headers(options?.headers ?? {}).entries()),
     ...(bodyText !== undefined ? { body: bodyText } : {}),
   });
 
@@ -81,7 +81,7 @@ export async function guardedFetch(
   if (guardrail.blocked) {
     // Strip query string before logging to avoid leaking sensitive params.
     const sanitizedUrl = (() => {
-      try { const u = new URL(url); return u.origin + u.pathname; } catch { return url; }
+      try { const u = new URL(url); return u.origin + u.pathname; } catch { return url.split("?")[0].split("#")[0]; }
     })();
     console.warn(
       `[threat-agent] guardedFetch blocked url=${sanitizedUrl} toolName=${toolName} reason=${guardrail.reason ?? "unspecified"}`
