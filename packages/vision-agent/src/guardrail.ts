@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const CIVIC_TIMEOUT_MS = 3000;
 const TOOL_NAME = "inspect_output";
+const mcpPort = readMcpPort();
 
 const GuardrailResultSchema = z.object({
   input: z.string(),
@@ -27,7 +28,7 @@ export async function inspectOutput(
 
   try {
     const response = await fetch(
-      `http://localhost:${readMcpPort()}/${TOOL_NAME}`,
+      `http://localhost:${mcpPort}/${TOOL_NAME}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +78,7 @@ export async function inspectOutput(
       output: "",
       blocked: false,
       reason: `civic-mcp unavailable: ${truncateBody(detail, 400)}`,
-      toolName: "inspect_output",
+      toolName: TOOL_NAME,
       timestamp,
     };
   }
