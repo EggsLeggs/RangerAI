@@ -339,6 +339,7 @@ function Sidebar({
         {breakpoint === "mobile" && (
           <button
             onClick={onClose}
+            aria-label="Close navigation"
             className="ml-auto text-ranger-muted hover:text-ranger-text"
           >
             <Icons.Close />
@@ -450,6 +451,7 @@ export default function RangerDashboard() {
     injectionsBlocked: 0,
     errors: 0,
   });
+  const [guardrailActive, setGuardrailActive] = useState(true);
   const [guardrailMetricsLoading, setGuardrailMetricsLoading] = useState(true);
   const cardsVisible = useStaggeredMount(3, 150);
   const zonesVisible = useStaggeredMount(4, 100);
@@ -509,9 +511,10 @@ export default function RangerDashboard() {
     let attempt = 0;
 
     const applyAlertPayload = (a: Record<string, unknown>) => {
+      const lat = typeof a.lat === "number" ? a.lat : NaN;
+      const lng = typeof a.lng === "number" ? a.lng : NaN;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       const species = typeof a.species === "string" ? a.species : "Unknown";
-      const lat = typeof a.lat === "number" ? a.lat : 0;
-      const lng = typeof a.lng === "number" ? a.lng : 0;
       const threatLevel = typeof a.threatLevel === "string" ? a.threatLevel : "INFO";
       const rowId =
         typeof a.alertId === "string" && a.alertId.length > 0
@@ -609,13 +612,17 @@ export default function RangerDashboard() {
           totalCalls?: number;
           injectionsBlocked?: number;
           errors?: number;
+          unavailable?: boolean;
         };
         if (cancelled) return;
-        setGuardrailMetrics({
-          totalCalls: data.totalCalls ?? 0,
-          injectionsBlocked: data.injectionsBlocked ?? 0,
-          errors: data.errors ?? 0,
-        });
+        setGuardrailActive(!data.unavailable);
+        if (!data.unavailable) {
+          setGuardrailMetrics({
+            totalCalls: data.totalCalls ?? 0,
+            injectionsBlocked: data.injectionsBlocked ?? 0,
+            errors: data.errors ?? 0,
+          });
+        }
       } catch {
         /* keep previous values */
       } finally {
@@ -670,6 +677,7 @@ export default function RangerDashboard() {
                 {!isDesktop && (
                   <button
                     onClick={() => setSidebarOpen(true)}
+                    aria-label="Open navigation"
                     className="text-ranger-muted hover:text-ranger-text"
                   >
                     <Icons.Menu />
@@ -690,7 +698,7 @@ export default function RangerDashboard() {
                     className="w-32 bg-transparent text-sm text-ranger-text placeholder-ranger-muted outline-none lg:w-48"
                   />
                 </div>
-                <button className="rounded-lg p-2 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
+                <button aria-label="More options" className="rounded-lg p-2 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
                   <Icons.MoreVertical />
                 </button>
               </div>
@@ -793,17 +801,17 @@ export default function RangerDashboard() {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-ranger-text">Sighting Activity</h2>
                   <div className="flex items-center gap-2">
-                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none">
+                    <select disabled className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none opacity-50 cursor-not-allowed">
                       <option>All Zones</option>
                       <option>Northern Corridor</option>
                       <option>Eastern Plains</option>
                     </select>
-                    <select className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none">
+                    <select disabled className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none opacity-50 cursor-not-allowed">
                       <option>30 Days</option>
                       <option>7 Days</option>
                       <option>90 Days</option>
                     </select>
-                    <button className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text">
+                    <button disabled aria-label="Filter" className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted opacity-50 cursor-not-allowed">
                       <Icons.Filter />
                     </button>
                   </div>
@@ -1000,7 +1008,7 @@ export default function RangerDashboard() {
                           </td>
                           <td className="py-3 pr-4 text-sm text-ranger-muted">{sighting.time}</td>
                           <td className="py-3">
-                            <button className="text-ranger-muted hover:text-ranger-text">
+                            <button aria-label="More options" className="text-ranger-muted hover:text-ranger-text">
                               <Icons.MoreVertical />
                             </button>
                           </td>
@@ -1019,11 +1027,10 @@ export default function RangerDashboard() {
         {/* Guardrail Footer */}
         <footer className="fixed bottom-0 left-0 right-0 z-40 flex h-10 items-center justify-between border-t border-ranger-border bg-ranger-footer px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-ranger-moss" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <span className={`h-2 w-2 rounded-full ${guardrailActive ? "bg-ranger-moss" : "bg-ranger-muted"}`} />
             <img src="/civic-logo.png" alt="Civic" className="h-4 w-auto opacity-80" />
             <span className="font-mono text-xs uppercase tracking-widest text-ranger-muted">
-              Guardrails Active
+              {guardrailActive ? "Guardrails Active" : "Guardrails Unavailable"}
             </span>
           </div>
           <div className="hidden items-center gap-4 sm:flex">
