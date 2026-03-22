@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
 import { Card } from "../ui/card";
 
 export function ReportModal({
@@ -10,12 +9,14 @@ export function ReportModal({
   reportUrl,
   filePath,
   onClose,
+  onViewAllReports,
 }: {
   generating: boolean;
   species: string | null;
   reportUrl?: string;
   filePath?: string;
   onClose: () => void;
+  onViewAllReports: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -78,9 +79,13 @@ export function ReportModal({
             ) : null}
 
             <div className="flex items-center justify-between">
-              <Link href="/reports" className="text-xs text-ranger-moss hover:underline">
+              <button
+                type="button"
+                onClick={onViewAllReports}
+                className="text-xs text-ranger-moss hover:underline"
+              >
                 View all reports
-              </Link>
+              </button>
               <button
                 type="button"
                 onClick={onClose}
