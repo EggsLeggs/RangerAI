@@ -42,6 +42,9 @@ export default function RangerDashboard() {
     setMapSightings,
   } = useAlertStream(setAgentPipeline);
 
+  const [lastReadCount, setLastReadCount] = useState(0);
+  const unreadNotifications = Math.max(0, recentSightings.length - lastReadCount);
+
   const {
     mapHistoryLoaded,
     mapHistoryError,
@@ -186,7 +189,9 @@ export default function RangerDashboard() {
         onClose={() => setSidebarOpen(false)}
         breakpoint={breakpoint}
         navSections={navSections}
-        notificationsCount={alertsToday}
+        notifications={recentSightings}
+        unreadCount={unreadNotifications}
+        onNotificationsOpen={() => setLastReadCount(recentSightings.length)}
       />
 
       <div className={`flex flex-1 flex-col overflow-hidden ${isDesktop ? "ml-[220px]" : ""}`}>
