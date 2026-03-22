@@ -19,6 +19,7 @@ import type { ZoneData } from "../../hooks/use-zone-health";
 
 export function SightingActivityChart({
   series,
+  loading,
   zones,
   onZoneChange,
   onDaysChange,
@@ -53,14 +54,19 @@ export function SightingActivityChart({
             <option value="30">30 Days</option>
             <option value="90">90 Days</option>
           </select>
-          <button aria-label="Filter" className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted">
+          <span aria-hidden="true" className="rounded-lg border border-ranger-border p-1.5 text-ranger-muted">
             <Icons.Filter />
-          </button>
+          </span>
         </div>
       </div>
-      <div className="h-[280px]">
+      <div className="relative h-[280px]">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-ranger-bg/70">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-ranger-muted border-t-transparent" />
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={series}>
+          <BarChart data={loading ? [] : series}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke={CHART.grid}
