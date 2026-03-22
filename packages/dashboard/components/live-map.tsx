@@ -7,10 +7,19 @@ import "leaflet/dist/leaflet.css";
 export type MapSightingSeverity = "CRITICAL" | "WARNING" | "INFO";
 
 export interface MapSighting {
+  id?: string;
   lat: number;
   lng: number;
   level: MapSightingSeverity;
   label?: string;
+  timestamp?: Date;
+}
+
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
 }
 
 const SEVERITY_COLOR: Record<MapSightingSeverity, string> = {
@@ -19,10 +28,21 @@ const SEVERITY_COLOR: Record<MapSightingSeverity, string> = {
   INFO: "#4a7c5a",
 };
 
-export function LiveMap({ sightings }: { sightings: MapSighting[] }) {
+export function LiveMap({
+  sightings,
+  onBoundsChange,
+  fitKey,
+}: {
+  sightings: MapSighting[];
+  onBoundsChange?: (bounds: MapBounds) => void;
+  fitKey?: number;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  onBoundsChangeRef.current = onBoundsChange;
+  const lastFitKeyRef = useRef(-1);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -35,6 +55,22 @@ export function LiveMap({ sightings }: { sightings: MapSighting[] }) {
     const layer = L.layerGroup().addTo(map);
     mapRef.current = map;
     layerRef.current = layer;
+
+    const emitBounds = () => {
+      if (!onBoundsChangeRef.current) return;
+      const b = map.getBounds();
+      onBoundsChangeRef.current({
+        north: b.getNorth(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        west: b.getWest(),
+      });
+    };
+
+    map.on("moveend", emitBounds);
+    map.on("zoomend", emitBounds);
+    // emit once map is ready
+    map.whenReady(emitBounds);
 
     return () => {
       map.remove();
@@ -59,15 +95,25 @@ export function LiveMap({ sightings }: { sightings: MapSighting[] }) {
         weight: 2,
       }).addTo(layer);
       if (s.label) {
-        m.bindPopup(s.label);
+        const ts = s.timestamp
+          ? `<br/><span style="font-size:11px;opacity:0.7">${s.timestamp.toLocaleString()}</span>`
+          : "";
+        m.bindPopup(`<strong>${s.label}</strong>${ts}`);
       }
       markers.push(m);
     }
-    if (markers.length > 0) {
+    const shouldFit = fitKey !== undefined && fitKey !== lastFitKeyRef.current;
+    if (markers.length > 0 && shouldFit) {
+      lastFitKeyRef.current = fitKey!;
       const group = L.featureGroup(markers);
-      map.fitBounds(group.getBounds().pad(0.25));
+      // defer until after browser paint so the container has proper dimensions
+      requestAnimationFrame(() => {
+        if (!mapRef.current) return;
+        mapRef.current.invalidateSize();
+        mapRef.current.fitBounds(group.getBounds().pad(0.25));
+      });
     }
-  }, [sightings]);
+  }, [sightings, fitKey]);
 
   return (
     <div
