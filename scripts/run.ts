@@ -612,6 +612,27 @@ Bun.serve({
       }
     }
 
+    if (pathname === "/audit_log" && req.method === "GET") {
+      const mcpPort = Number(process.env.MCP_PORT) || 3001;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5_000);
+      try {
+        const res = await fetch(`http://127.0.0.1:${mcpPort}/audit_log`, { signal: controller.signal });
+        clearTimeout(timeout);
+        return new Response(await res.text(), {
+          status: res.status,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        const isTimeout = err instanceof Error && err.name === "AbortError";
+        return new Response(JSON.stringify({ error: isTimeout ? "MCP server timed out" : String(err) }), {
+          status: isTimeout ? 504 : 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (pathname === "/db-stats" && req.method === "GET") {
       try {
         const database = await connectDB();

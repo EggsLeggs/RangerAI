@@ -7,11 +7,25 @@ type AuditPayload = {
   entries?: { blocked?: boolean; reason?: string }[];
 };
 
-export async function GET() {
+const FETCH_TIMEOUT_MS = 5_000;
+
+function auditLogUrl(): string {
+  const monitorUrl = process.env.MONITOR_URL;
+  if (monitorUrl) {
+    const u = new URL(monitorUrl);
+    u.pathname = "/audit_log";
+    u.search = "";
+    return u.toString();
+  }
   const port = process.env.MCP_PORT?.trim() || "3001";
+  return `http://127.0.0.1:${port}/audit_log`;
+}
+
+export async function GET() {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/audit_log`, {
+    const res = await fetch(auditLogUrl(), {
       cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
       return Response.json(

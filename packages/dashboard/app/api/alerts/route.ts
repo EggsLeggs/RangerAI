@@ -101,12 +101,20 @@ export async function POST(req: Request) {
 }
 
 const HEARTBEAT_MS = 30_000;
+const MAX_STREAM_DURATION_MS = 4.5 * 60 * 1000; // 4.5 min - close before Vercel's 5 min limit
 
 export async function GET() {
   const encoder = new TextEncoder();
   const clients = getSseClients();
   let sendRef: SseSender | null = null;
   let heartbeatId: ReturnType<typeof setInterval> | null = null;
+  let maxLifetimeId: ReturnType<typeof setTimeout> | null = null;
+
+  const cleanup = () => {
+    if (heartbeatId !== null) { clearInterval(heartbeatId); heartbeatId = null; }
+    if (maxLifetimeId !== null) { clearTimeout(maxLifetimeId); maxLifetimeId = null; }
+    if (sendRef) { clients.delete(sendRef); sendRef = null; }
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -123,16 +131,17 @@ export async function GET() {
       heartbeatId = setInterval(() => {
         send({ type: "heartbeat", at: new Date().toISOString() });
       }, HEARTBEAT_MS);
+
+      maxLifetimeId = setTimeout(() => {
+        try {
+          send({ type: "reconnect" });
+          cleanup();
+          controller.close();
+        } catch { /* already closed */ }
+      }, MAX_STREAM_DURATION_MS);
     },
     cancel() {
-      if (heartbeatId !== null) {
-        clearInterval(heartbeatId);
-        heartbeatId = null;
-      }
-      if (sendRef) {
-        clients.delete(sendRef);
-        sendRef = null;
-      }
+      cleanup();
     },
   });
 
