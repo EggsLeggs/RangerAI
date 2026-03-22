@@ -34,9 +34,6 @@ export function DashboardView({
   frequencyLoading,
   frequencyTab,
   onFrequencyTabChange,
-  civicActive,
-  civicTotalToolCallsAudited,
-  civicInjectionsBlocked,
   onGenerateReport,
   generatingAlertId,
 }: {
@@ -62,9 +59,6 @@ export function DashboardView({
   frequencyLoading: boolean;
   frequencyTab: string;
   onFrequencyTabChange: (tab: string) => void;
-  civicActive: boolean;
-  civicTotalToolCallsAudited: number;
-  civicInjectionsBlocked: number;
   onGenerateReport: (alertId: string, species: string) => void;
   generatingAlertId: string | null;
 }) {
@@ -140,23 +134,6 @@ export function DashboardView({
         />
       </div>
 
-      {/* Civic Guardrail Audit Strip */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ranger-border bg-ranger-card px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${civicActive ? "bg-ranger-moss" : "bg-ranger-muted"}`} />
-          <span className="font-mono text-xs uppercase tracking-widest text-ranger-muted">
-            {civicActive ? "Civic Guardrails Active" : "Civic Guardrails Unavailable"}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded bg-ranger-border/50 px-2 py-0.5 font-mono text-xs uppercase tracking-widest text-ranger-muted">
-            {civicTotalToolCallsAudited} calls audited
-          </span>
-          <span className="rounded bg-ranger-border/50 px-2 py-0.5 font-mono text-xs uppercase tracking-widest text-ranger-muted">
-            {civicInjectionsBlocked} injections blocked
-          </span>
-        </div>
-      </div>
     </>
   );
 }

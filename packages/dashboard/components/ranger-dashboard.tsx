@@ -250,9 +250,6 @@ export default function RangerDashboard() {
                 frequencyLoading={frequencyLoading}
                 frequencyTab={frequencyTab}
                 onFrequencyTabChange={setFrequencyTab}
-                civicActive={guardrailActive}
-                civicTotalToolCallsAudited={guardrailMetrics.totalCalls}
-                civicInjectionsBlocked={guardrailMetrics.injectionsBlocked}
                 onGenerateReport={triggerReport}
                 generatingAlertId={generating}
               />

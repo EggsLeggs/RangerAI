@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface StatsResponse {
   activeZones: number;
@@ -19,6 +19,7 @@ export function useStats({ alertCount }: { alertCount?: number } = {}): UseStats
   const [data, setData] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,6 +31,7 @@ export function useStats({ alertCount }: { alertCount?: number } = {}): UseStats
         const json = (await res.json()) as StatsResponse;
         setData(json);
         setError(false);
+        hasLoaded.current = true;
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         setError(true);
@@ -39,7 +41,7 @@ export function useStats({ alertCount }: { alertCount?: number } = {}): UseStats
       }
     };
 
-    setLoading(true);
+    if (!hasLoaded.current) setLoading(true);
     doFetch();
 
     const interval = setInterval(doFetch, 60_000);
