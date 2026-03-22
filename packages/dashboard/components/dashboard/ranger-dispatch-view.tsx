@@ -40,6 +40,7 @@ export function RangerDispatchView() {
   const [rows, setRows] = useState<DispatchRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
 
   // Initial fetch for historical CRITICAL alerts
   useEffect(() => {
@@ -51,9 +52,15 @@ export function RangerDispatchView() {
         if (cancelled) return;
         if (!res.ok) { setError(data.error ?? "Failed to load dispatch log"); return; }
         const parsed = (data.alerts ?? [])
-          .flatMap((a) => { const row = parseRow(a); return row ? [row] : []; })
-          .sort((a, b) => b.dispatchedAt.getTime() - a.dispatchedAt.getTime());
-        setRows(parsed);
+          .flatMap((a) => { const row = parseRow(a); return row ? [row] : []; });
+        setRows((prev) => {
+          const map = new Map(prev.map((r) => [r.alertId, r]));
+          for (const row of parsed) {
+            const existing = map.get(row.alertId);
+            if (!existing || row.dispatchedAt > existing.dispatchedAt) map.set(row.alertId, row);
+          }
+          return [...map.values()].sort((a, b) => b.dispatchedAt.getTime() - a.dispatchedAt.getTime());
+        });
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dispatch log");
       } finally {
@@ -69,13 +76,14 @@ export function RangerDispatchView() {
     es.onmessage = (ev: MessageEvent) => {
       try {
         const msg = JSON.parse(ev.data) as { type?: string; alert?: Record<string, unknown> };
+        setStreamError(null);
         if (msg.type !== "alert" || !msg.alert) return;
         if (msg.alert.threatLevel !== "CRITICAL") return;
         const row = parseRow(msg.alert);
         if (row) setRows((prev) => mergeRow(prev, row));
       } catch { /* ignore parse errors */ }
     };
-    es.onerror = () => setError("Alert stream disconnected — live updates paused.");
+    es.onerror = () => setStreamError("Alert stream disconnected — live updates paused.");
     return () => es.close();
   }, []);
 
@@ -96,6 +104,12 @@ export function RangerDispatchView() {
           </div>
         </div>
       </Card>
+
+      {streamError && (
+        <div className="rounded-lg border border-ranger-apricot/30 bg-ranger-apricot/10 px-4 py-2 text-xs text-ranger-apricot">
+          {streamError}
+        </div>
+      )}
 
       {/* Dispatch table */}
       <Card className="p-5">
