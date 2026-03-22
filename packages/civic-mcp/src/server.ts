@@ -156,7 +156,10 @@ export function startCivicMCP(port: number): void {
       }
 
       // Bearer token validation - enforced when CIVIC_CLIENT_ID is configured.
-      if (authActive) {
+      // /audit_log is exempt: it is a read-only metrics endpoint that exposes
+      // no sensitive data and does not require authentication.
+      const requiresAuth = authActive && url.pathname !== "/audit_log";
+      if (requiresAuth) {
         const valid = await verifyBearerToken(req.headers.get("Authorization"));
         if (!valid) return unauthorizedResponse();
       }

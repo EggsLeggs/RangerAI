@@ -6,7 +6,10 @@ import OpenAI from "openai";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { type ScoredSighting, ThreatLevel } from "@rangerai/shared";
 
-const REPORTS_DIR = path.resolve(process.cwd(), "reports");
+// Vercel's filesystem is read-only outside /tmp; fall back to /tmp/reports when deployed
+const REPORTS_DIR = process.env.VERCEL
+  ? "/tmp/reports"
+  : path.resolve(process.cwd(), "reports");
 
 const PAWPRINT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200">
   <ellipse cx="50" cy="65" rx="22" ry="16" fill="#5a8a6a" opacity="0.4"/>
