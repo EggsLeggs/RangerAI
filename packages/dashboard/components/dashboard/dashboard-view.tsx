@@ -134,6 +134,6 @@ export function DashboardView({
         />
       </div>
 
-</>
+    </>
   );
 }
