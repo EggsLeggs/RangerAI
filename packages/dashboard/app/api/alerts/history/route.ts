@@ -15,8 +15,14 @@ export async function GET(request: Request) {
   const levels = searchParams.get("levels");
   const levelSet = levels ? new Set(levels.split(",")) : null;
 
-  const fromDate = from ? new Date(from) : null;
-  const toDate = to ? new Date(to) : null;
+  function parseValidDateParam(value: string | null): Date | null {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const validFromDate = parseValidDateParam(from);
+  const validToDate = parseValidDateParam(to);
 
   // attempt MongoDB
   let dbAlerts: Record<string, unknown>[] = [];
@@ -25,12 +31,14 @@ export async function GET(request: Request) {
     const col = await getCollection(COLLECTIONS.ALERTS);
     const filter: Record<string, unknown> = {};
     const dateFilter: Record<string, Date> = {};
-    if (fromDate) dateFilter.$gte = fromDate;
-    if (toDate) dateFilter.$lte = toDate;
+    if (validFromDate) dateFilter.$gte = validFromDate;
+    if (validToDate) dateFilter.$lte = validToDate;
     if (Object.keys(dateFilter).length) filter.dispatchedAt = dateFilter;
     if (levelSet) filter.threatLevel = { $in: [...levelSet] };
     dbAlerts = await col.find(filter).sort({ dispatchedAt: -1 }).limit(500).toArray();
-  } catch { /* db unavailable - fall through to queue */ }
+  } catch (err) {
+    console.error("DB unavailable fetching alerts history", err);
+  }
 
   // if db has data, return it
   if (dbAlerts.length > 0) {
@@ -46,8 +54,8 @@ export async function GET(request: Request) {
       if (typeof a["lat"] !== "number" || typeof a["lng"] !== "number") return false;
       const ts = (a["dispatchedAt"] ?? a["receivedAt"]) as string | undefined;
       const d = ts ? new Date(ts) : null;
-      if (fromDate && d && d < fromDate) return false;
-      if (toDate && d && d > toDate) return false;
+      if (validFromDate && d && d < validFromDate) return false;
+      if (validToDate && d && d > validToDate) return false;
       if (levelSet && typeof a["threatLevel"] === "string" && !levelSet.has(a["threatLevel"] as string)) return false;
       return true;
     })

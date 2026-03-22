@@ -6,6 +6,11 @@ type AgentId = "ingest" | "vision" | "threat" | "alert";
 type AgentStatus = "idle" | "active" | "error";
 type LogTone = "muted" | "active" | "idle" | "error";
 
+function normalizeAgentStatus(value: unknown): AgentStatus {
+  if (value === "idle" || value === "active" || value === "error") return value;
+  return "idle";
+}
+
 interface LogEntry {
   text: string;
   tone: LogTone;
@@ -142,7 +147,7 @@ export function AgentLogsPanel() {
               const a = st[id];
               if (!a) continue;
               next[id] = {
-                status: (a.status as AgentStatus) ?? "idle",
+                status: normalizeAgentStatus(a.status),
                 lastEvent: a.lastEvent ?? null,
                 count: typeof a.count === "number" ? a.count : 0,
                 logs: (a.logs ?? []).map((line) => ({
@@ -163,7 +168,7 @@ export function AgentLogsPanel() {
         if (typeof msg.agent === "string" && typeof msg.status === "string") {
           const agentId = msg.agent as AgentId;
           if (!AGENTS.some((a) => a.id === agentId)) return;
-          const agentStatus = msg.status as AgentStatus;
+          const agentStatus = normalizeAgentStatus(msg.status);
           const message = typeof msg.message === "string" ? msg.message : "";
           const count =
             typeof msg.count === "number" ? msg.count : undefined;

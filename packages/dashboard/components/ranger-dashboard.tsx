@@ -531,6 +531,7 @@ export default function RangerDashboard() {
   const [mapBoundsActive, setMapBoundsActive] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const mapFilterMountedRef = useRef(false);
+  const mapHistoryRequestIdRef = useRef(0);
   const [streamLive, setStreamLive] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [guardrailMetrics, setGuardrailMetrics] = useState({
@@ -586,7 +587,6 @@ export default function RangerDashboard() {
   useEffect(() => {
     if (!mapFilterMountedRef.current) { mapFilterMountedRef.current = true; return; }
     setMapFitKey((k) => k + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapSeverityFilter, mapTimeRange, mapBoundsActive]);
 
   // re-fit map when navigating to the live-map view
@@ -829,6 +829,7 @@ export default function RangerDashboard() {
 
   // hydrate map sightings from history when time range filter changes
   useEffect(() => {
+    const currentId = ++mapHistoryRequestIdRef.current;
     let cancelled = false;
     (async () => {
       try {
@@ -843,9 +844,9 @@ export default function RangerDashboard() {
           params.set("from", new Date(Date.now() - rangeMs[mapTimeRange]).toISOString());
         }
         const res = await fetch(`/api/alerts/history?${params.toString()}`);
-        if (!res.ok || cancelled) return;
+        if (!res.ok || cancelled || currentId !== mapHistoryRequestIdRef.current) return;
         const data = (await res.json()) as { alerts?: Record<string, unknown>[] };
-        if (cancelled) return;
+        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
         const fetched: MapSighting[] = [];
         for (const a of data.alerts ?? []) {
           if (typeof a.alertId !== "string") continue;
@@ -861,7 +862,7 @@ export default function RangerDashboard() {
             timestamp: ts ?? undefined,
           });
         }
-        if (cancelled) return;
+        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
         // replace history-based entries with fresh fetch; keep any live SSE-only entries
         // (those arrive after page load and may not be in DB yet)
         setMapSightings((prev) => {
@@ -877,13 +878,16 @@ export default function RangerDashboard() {
         });
       } catch { /* ignore */ }
       finally {
-        if (!cancelled) {
+        if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
           setMapHistoryLoaded(true);
           setMapFitKey((k) => k + 1);
         }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      mapHistoryRequestIdRef.current += 1;
+    };
   }, [mapTimeRange]);
 
   useEffect(() => {

@@ -95,10 +95,19 @@ export function LiveMap({
         weight: 2,
       }).addTo(layer);
       if (s.label) {
-        const ts = s.timestamp
-          ? `<br/><span style="font-size:11px;opacity:0.7">${s.timestamp.toLocaleString()}</span>`
-          : "";
-        m.bindPopup(`<strong>${s.label}</strong>${ts}`);
+        const el = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = s.label;
+        el.appendChild(strong);
+        if (s.timestamp) {
+          el.appendChild(document.createElement("br"));
+          const tsEl = document.createElement("span");
+          tsEl.style.fontSize = "11px";
+          tsEl.style.opacity = "0.7";
+          tsEl.textContent = s.timestamp.toLocaleString();
+          el.appendChild(tsEl);
+        }
+        m.bindPopup(el);
       }
       markers.push(m);
     }

@@ -9,9 +9,16 @@ function monitorDbStatsUrl(): string {
   return u.toString();
 }
 
+const MONITOR_DB_STATS_TIMEOUT_MS = 5_000;
+
 export async function GET() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), MONITOR_DB_STATS_TIMEOUT_MS);
   try {
-    const res = await fetch(monitorDbStatsUrl(), { cache: "no-store" });
+    const res = await fetch(monitorDbStatsUrl(), {
+      cache: "no-store",
+      signal: controller.signal,
+    });
     if (!res.ok) {
       return Response.json(
         { error: `monitor returned ${res.status}` },
@@ -21,9 +28,14 @@ export async function GET() {
     const data = (await res.json()) as Record<string, number>;
     return Response.json(data);
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return Response.json({ error: "monitor db-stats request timed out" }, { status: 504 });
+    }
     return Response.json(
       { error: err instanceof Error ? err.message : String(err) },
       { status: 502 }
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
