@@ -14,7 +14,8 @@ export type DashboardView =
   | "wildlife-stats"
   | "species-index"
   | "animal-tracker"
-  | "zone-manager";
+  | "zone-manager"
+  | "ranger-dispatch";
 
 export interface NavItem {
   name: string;

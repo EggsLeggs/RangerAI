@@ -26,6 +26,7 @@ import { WildlifeStatsView } from "./dashboard/wildlife-stats-view";
 import { SpeciesIndexView } from "./dashboard/species-index-view";
 import { AnimalTrackerView } from "./dashboard/animal-tracker-view";
 import { ZoneManagerView } from "./dashboard/zone-manager-view";
+import { RangerDispatchView } from "./dashboard/ranger-dispatch-view";
 import type { MapSighting } from "./live-map";
 import type { DashboardView as DashboardViewType, NavSection } from "./dashboard/types";
 
@@ -38,6 +39,7 @@ const PAGE_TITLES: Record<DashboardViewType, string> = {
   "species-index": "Species Index",
   "animal-tracker": "Animal Tracker",
   "zone-manager": "Zone Manager",
+  "ranger-dispatch": "Ranger Dispatch",
 };
 
 export default function RangerDashboard() {
@@ -183,7 +185,12 @@ export default function RangerDashboard() {
       {
         title: "OPERATIONS",
         items: [
-          { name: "Ranger Dispatch", icon: <Icons.Dispatch />, active: false },
+          {
+            name: "Ranger Dispatch",
+            icon: <Icons.Dispatch />,
+            active: activeView === "ranger-dispatch",
+            onSelect: () => setActiveView("ranger-dispatch"),
+          },
           {
             name: "Reports",
             icon: <Icons.Report />,
@@ -266,6 +273,8 @@ export default function RangerDashboard() {
                 species={species}
                 speciesLoading={speciesLoading}
               />
+            ) : activeView === "ranger-dispatch" ? (
+              <RangerDispatchView />
             ) : activeView === "live-map" ? (
               <LiveMapView
                 filteredSightings={filteredMapSightings}
