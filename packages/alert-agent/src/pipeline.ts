@@ -1,11 +1,11 @@
-import { type ScoredSighting, type Alert } from "@rangerai/shared";
+import { type AlertBoth, type AlertWebhook, type ScoredSighting } from "@rangerai/shared";
 import { formatAlert } from "./formatter.js";
 import { inspectAlert } from "./guardrail.js";
 import { dispatchWebhook } from "./webhook.js";
 import { dispatchEmail } from "./email.js";
 
 export async function dispatchAlert(sighting: ScoredSighting): Promise<void> {
-  const alert: Alert = formatAlert(sighting);
+  const alert: AlertWebhook | AlertBoth = formatAlert(sighting);
   const guardrail = await inspectAlert(alert);
 
   if (guardrail.blocked) {

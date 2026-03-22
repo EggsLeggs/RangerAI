@@ -19,6 +19,9 @@
       ],
       "@rangerai/shared/mcp-port": [
         "packages/shared/src/mcp-port.ts"
+      ],
+      "@rangerai/shared/db": [
+        "packages/shared/src/db.ts"
       ]
     }
   },

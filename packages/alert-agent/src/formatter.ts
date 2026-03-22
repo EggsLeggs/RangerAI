@@ -1,4 +1,10 @@
-import { Alert, AlertDispatchMethod, ScoredSighting, ThreatLevel } from "@rangerai/shared";
+import {
+  type AlertBoth,
+  type AlertDispatchMethod,
+  type AlertWebhook,
+  ScoredSighting,
+  ThreatLevel,
+} from "@rangerai/shared";
 
 function formatCoord(n: number): string {
   return n.toFixed(4);
@@ -45,7 +51,7 @@ function buildWebhookMessage(sighting: ScoredSighting): string {
   );
 }
 
-export function formatAlert(sighting: ScoredSighting): Alert {
+export function formatAlert(sighting: ScoredSighting): AlertWebhook | AlertBoth {
   const dispatchMethod = dispatchMethodFor(sighting.threatLevel);
   const base = {
     ...sighting,
