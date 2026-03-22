@@ -1,5 +1,7 @@
+import type { ObjectId } from "mongodb";
+
 export type ReportDoc = {
-  _id: unknown;
+  _id: ObjectId;
   filePath: string;
   generatedAt: Date | string;
   species: string;
