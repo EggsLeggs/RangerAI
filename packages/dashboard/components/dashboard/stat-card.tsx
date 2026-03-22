@@ -11,6 +11,8 @@ export function StatCard({
   trend,
   visible,
   delay,
+  loading,
+  error,
 }: {
   title: string;
   value: number;
@@ -18,8 +20,10 @@ export function StatCard({
   trend: "up" | "down";
   visible: boolean;
   delay: number;
+  loading?: boolean;
+  error?: boolean;
 }) {
-  const count = useCountUp(visible ? value : 0, 1500);
+  const count = useCountUp(visible && !loading && !error ? value : 0, 1500);
 
   return (
     <Card
@@ -32,7 +36,9 @@ export function StatCard({
     >
       <div className="text-sm text-ranger-muted">{title}</div>
       <div className="mt-2 flex items-center gap-3">
-        <span className="text-3xl font-semibold text-ranger-text">{count}</span>
+        <span className="text-3xl font-semibold text-ranger-text">
+          {loading ? "—" : error ? "!" : count}
+        </span>
         <span
           aria-label={trend === "up" ? "Up trend" : "Down trend"}
           className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${

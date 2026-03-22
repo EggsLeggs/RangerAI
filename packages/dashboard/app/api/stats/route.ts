@@ -48,12 +48,11 @@ export async function GET() {
 
     const startOfToday = new Date();
     startOfToday.setUTCHours(0, 0, 0, 0);
-    const startOfTodayISO = startOfToday.toISOString();
 
     const alerts = await col.find({
       $or: [
         { dispatchedAt: { $gte: startOfToday } },
-        { dispatchedAt: { $gte: startOfTodayISO } },
+        { receivedAt: { $gte: startOfToday } },
       ],
     }).toArray();
 

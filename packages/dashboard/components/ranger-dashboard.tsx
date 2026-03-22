@@ -59,7 +59,7 @@ export default function RangerDashboard() {
     loading: guardrailMetricsLoading,
   } = useGuardrailMetrics();
 
-  const { activeZones, speciesTracked } = useStats({ alertCount: alertsToday });
+  const { activeZones, speciesTracked, loading: statsLoading, error: statsError } = useStats({ alertCount: alertsToday });
   const { zones, totalAnimals, loading: zonesLoading } = useZoneHealth({ alertCount: alertsToday });
 
   const [activityDays, setActivityDays] = useState(7);
@@ -199,6 +199,8 @@ export default function RangerDashboard() {
                 alertsToday={alertsToday}
                 activeZones={activeZones}
                 speciesTracked={speciesTracked}
+                statsLoading={statsLoading}
+                statsError={statsError}
                 recentSightings={recentSightings}
                 sightingsPage={sightingsPage}
                 onSightingsPageChange={setSightingsPage}
@@ -214,6 +216,9 @@ export default function RangerDashboard() {
                 frequencyLoading={frequencyLoading}
                 frequencyTab={frequencyTab}
                 onFrequencyTabChange={setFrequencyTab}
+                civicActive={guardrailActive}
+                civicTotalToolCallsAudited={guardrailMetrics.totalCalls}
+                civicInjectionsBlocked={guardrailMetrics.injectionsBlocked}
               />
             )}
           </main>

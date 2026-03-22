@@ -8,6 +8,12 @@ function getQueue(): Queued[] {
   return g.__rangerAlertQueue ?? [];
 }
 
+const UTC_DAY_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
 function parseTabToDays(tab: string): number {
   switch (tab) {
     case "7 Days": return 7;
@@ -30,7 +36,7 @@ function computeFrequency(alerts: Record<string, unknown>[], days: number) {
     const d = raw instanceof Date ? raw : typeof raw === "string" ? new Date(raw) : null;
     if (!d || isNaN(d.getTime()) || d.getTime() < since) continue;
 
-    const dayKey = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayKey = UTC_DAY_FMT.format(d);
     const key = `${dayKey}:${species}`;
     daySpeciesMap.set(key, (daySpeciesMap.get(key) ?? 0) + 1);
     speciesTotals.set(species, (speciesTotals.get(species) ?? 0) + 1);
@@ -43,7 +49,7 @@ function computeFrequency(alerts: Record<string, unknown>[], days: number) {
 
   const series: Array<Record<string, number | string>> = Array.from({ length: days }, (_, i) => {
     const d = new Date(Date.now() - (days - 1 - i) * 24 * 60 * 60 * 1000);
-    const dayKey = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayKey = UTC_DAY_FMT.format(d);
     const entry: Record<string, number | string> = { day: dayKey };
     for (const s of topSpecies) {
       entry[s] = daySpeciesMap.get(`${dayKey}:${s}`) ?? 0;
@@ -65,12 +71,11 @@ export async function GET(request: Request) {
     const col = await getCollection(COLLECTIONS.ALERTS);
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const sinceISO = since.toISOString();
 
     const alerts = await col.find({
       $or: [
         { dispatchedAt: { $gte: since } },
-        { dispatchedAt: { $gte: sinceISO } },
+        { receivedAt: { $gte: since } },
       ],
     }).toArray();
 

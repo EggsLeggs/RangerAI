@@ -17,6 +17,8 @@ export function DashboardView({
   alertsToday,
   activeZones,
   speciesTracked,
+  statsLoading,
+  statsError,
   recentSightings,
   sightingsPage,
   onSightingsPageChange,
@@ -32,12 +34,17 @@ export function DashboardView({
   frequencyLoading,
   frequencyTab,
   onFrequencyTabChange,
+  civicActive,
+  civicTotalToolCallsAudited,
+  civicInjectionsBlocked,
 }: {
   isMobile: boolean;
   isDesktop: boolean;
   alertsToday: number;
   activeZones: number;
   speciesTracked: number;
+  statsLoading: boolean;
+  statsError: boolean;
   recentSightings: RecentSightingRow[];
   sightingsPage: number;
   onSightingsPageChange: (page: number) => void;
@@ -53,6 +60,9 @@ export function DashboardView({
   frequencyLoading: boolean;
   frequencyTab: string;
   onFrequencyTabChange: (tab: string) => void;
+  civicActive: boolean;
+  civicTotalToolCallsAudited: number;
+  civicInjectionsBlocked: number;
 }) {
   const cardsVisible = useStaggeredMount(3, 150);
 
@@ -67,6 +77,8 @@ export function DashboardView({
           trend="up"
           visible={cardsVisible[0]}
           delay={0}
+          loading={statsLoading}
+          error={statsError}
         />
         <StatCard
           title="Species Tracked"
@@ -75,6 +87,8 @@ export function DashboardView({
           trend="up"
           visible={cardsVisible[1]}
           delay={100}
+          loading={statsLoading}
+          error={statsError}
         />
         <StatCard
           title="Alerts Today"
@@ -83,6 +97,8 @@ export function DashboardView({
           trend="down"
           visible={cardsVisible[2]}
           delay={200}
+          loading={statsLoading}
+          error={statsError}
         />
       </div>
 
@@ -116,6 +132,24 @@ export function DashboardView({
           page={sightingsPage}
           onPageChange={onSightingsPageChange}
         />
+      </div>
+
+      {/* Civic Guardrail Audit Strip */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ranger-border bg-ranger-card px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${civicActive ? "bg-ranger-moss" : "bg-ranger-muted"}`} />
+          <span className="font-mono text-xs uppercase tracking-widest text-ranger-muted">
+            {civicActive ? "Civic Guardrails Active" : "Civic Guardrails Unavailable"}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded bg-ranger-border/50 px-2 py-0.5 font-mono text-xs uppercase tracking-widest text-ranger-muted">
+            {civicTotalToolCallsAudited} calls audited
+          </span>
+          <span className="rounded bg-ranger-border/50 px-2 py-0.5 font-mono text-xs uppercase tracking-widest text-ranger-muted">
+            {civicInjectionsBlocked} injections blocked
+          </span>
+        </div>
       </div>
     </>
   );

@@ -30,6 +30,9 @@ export function SightingActivityChart({
   onZoneChange: (zone: string) => void;
   onDaysChange: (days: number) => void;
 }) {
+  // Negate resolved values so they render below the zero line in the diverging chart
+  const displaySeries = series.map((pt) => ({ ...pt, resolved: -pt.resolved }));
+
   return (
     <Card className="p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -66,7 +69,7 @@ export function SightingActivityChart({
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={loading ? [] : series}>
+          <BarChart data={loading ? [] : displaySeries}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke={CHART.grid}

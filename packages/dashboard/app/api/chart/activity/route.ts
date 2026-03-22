@@ -46,7 +46,7 @@ function computeSeries(alerts: Record<string, unknown>[], days: number, zone: st
       day: key,
       sightings: data.sightings,
       incidents: data.incidents,
-      resolved: -data.resolved,
+      resolved: data.resolved,
     };
   });
 }
@@ -62,12 +62,11 @@ export async function GET(request: Request) {
     const col = await getCollection(COLLECTIONS.ALERTS);
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const sinceISO = since.toISOString();
 
     const alerts = await col.find({
       $or: [
         { dispatchedAt: { $gte: since } },
-        { dispatchedAt: { $gte: sinceISO } },
+        { receivedAt: { $gte: since } },
       ],
     }).toArray();
 
