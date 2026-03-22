@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useId } from "react";
 import { Icons } from "../icons";
 import { ThreatBadge } from "./threat-badge";
 import type { Breakpoint, NavSection } from "./types";
@@ -25,6 +25,7 @@ export function Sidebar({
 }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -102,11 +103,17 @@ export function Sidebar({
 
       <div ref={footerRef} className="relative border-t border-ranger-border p-3">
         {notifOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 rounded-xl border border-ranger-border bg-ranger-card shadow-xl z-50 max-h-80 flex flex-col">
+          <div
+            id={panelId}
+            role="region"
+            aria-label="Notifications"
+            className="absolute bottom-full left-0 right-0 mb-1 mx-2 rounded-xl border border-ranger-border bg-ranger-card shadow-xl z-50 max-h-80 flex flex-col"
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-ranger-border">
               <span className="text-sm font-medium text-ranger-text">Notifications</span>
               <button
                 onClick={() => setNotifOpen(false)}
+                aria-label="Close notifications"
                 className="text-ranger-muted hover:text-ranger-text"
               >
                 <Icons.Close />
@@ -148,6 +155,8 @@ export function Sidebar({
             setNotifOpen((v) => !v);
             if (!notifOpen) onNotificationsOpen?.();
           }}
+          aria-expanded={notifOpen}
+          aria-controls={panelId}
           className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-ranger-muted hover:bg-ranger-border/30 hover:text-ranger-text"
         >
           <div className="flex items-center gap-3">
