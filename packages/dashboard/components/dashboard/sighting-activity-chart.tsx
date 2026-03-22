@@ -39,6 +39,7 @@ export function SightingActivityChart({
         <h2 className="text-lg font-semibold text-ranger-text">Sighting Activity</h2>
         <div className="flex items-center gap-2">
           <select
+            aria-label="Filter by zone"
             className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none"
             onChange={(e) => onZoneChange(e.target.value)}
             defaultValue="all"
@@ -49,6 +50,7 @@ export function SightingActivityChart({
             ))}
           </select>
           <select
+            aria-label="Filter by days"
             className="rounded-lg border border-ranger-border bg-ranger-bg px-3 py-1.5 text-sm text-ranger-text outline-none"
             onChange={(e) => onDaysChange(Number(e.target.value))}
             defaultValue="7"
@@ -64,8 +66,9 @@ export function SightingActivityChart({
       </div>
       <div className="relative h-[280px]">
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-ranger-bg/70">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-ranger-muted border-t-transparent" />
+          <div role="status" aria-live="polite" aria-busy="true" className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-ranger-bg/70">
+            <span className="sr-only">Loading chart data</span>
+            <div aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-2 border-ranger-muted border-t-transparent" />
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
