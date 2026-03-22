@@ -13,7 +13,8 @@ export type DashboardView =
   | "reports"
   | "wildlife-stats"
   | "species-index"
-  | "animal-tracker";
+  | "animal-tracker"
+  | "ranger-dispatch";
 
 export interface NavItem {
   name: string;
