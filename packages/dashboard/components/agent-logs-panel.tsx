@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAgentStatusStream } from "./agent-status-stream";
 
 type AgentId = "ingest" | "vision" | "threat" | "alert";
 type AgentStatus = "idle" | "active" | "error";
@@ -31,7 +32,7 @@ const AGENTS: {
   nameClass: string;
 }[] = [
   { id: "ingest", label: "Ingest", nameClass: "text-ranger-moss" },
-  { id: "vision", label: "Vision", nameClass: "text-[#3d7eb8]" },
+  { id: "vision", label: "Vision", nameClass: "text-ranger-sky" },
   { id: "threat", label: "Threat", nameClass: "text-ranger-apricot" },
   { id: "alert", label: "Alert", nameClass: "text-ranger-spice" },
 ];
@@ -55,7 +56,7 @@ function toneForStatus(status: string): LogTone {
 function logToneClass(tone: LogTone): string {
   switch (tone) {
     case "active":
-      return "text-[#2a6aaa]";
+      return "text-ranger-sky-deep";
     case "idle":
       return "text-ranger-moss";
     case "error":
@@ -68,7 +69,7 @@ function logToneClass(tone: LogTone): string {
 function badgeClass(status: AgentStatus): string {
   switch (status) {
     case "active":
-      return "border border-[#5a9fd4]/40 bg-[#5a9fd4]/12 text-[#2a6aaa]";
+      return "border border-ranger-sky-soft/40 bg-ranger-sky-soft/12 text-ranger-sky-deep";
     case "error":
       return "border border-coral-alert/40 bg-coral-alert/10 text-coral-alert";
     default:
@@ -77,16 +78,13 @@ function badgeClass(status: AgentStatus): string {
 }
 
 export function AgentLogsPanel() {
+  const { streamState, paused, subscribe } = useAgentStatusStream();
   const [agents, setAgents] = useState<Record<AgentId, AgentLogState>>(() => ({
     ingest: emptyAgentState(),
     vision: emptyAgentState(),
     threat: emptyAgentState(),
     alert: emptyAgentState(),
   }));
-  const [paused, setPaused] = useState(false);
-  const [streamState, setStreamState] = useState<"connecting" | "live" | "offline">(
-    "connecting"
-  );
   const [dbStats, setDbStats] = useState<Record<string, number> | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const logBoxRefs = useRef<Record<AgentId, HTMLDivElement | null>>({
@@ -97,122 +95,72 @@ export function AgentLogsPanel() {
   });
 
   useEffect(() => {
-    let closed = false;
-    let es: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let attempt = 0;
-
     const scrollBottom = (id: AgentId) => {
       const el = logBoxRefs.current[id];
       if (el) el.scrollTop = el.scrollHeight;
     };
 
-    const connect = () => {
-      if (closed) return;
-      es?.close();
-      setStreamState((s) => (s === "live" ? s : "connecting"));
-      es = new EventSource("/api/agent-status");
-      es.onopen = () => {
-        if (!closed) setStreamState("live");
-      };
-      es.onmessage = (ev: MessageEvent) => {
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(ev.data) as Record<string, unknown>;
-        } catch {
-          return;
-        }
-        attempt = 0;
+    return subscribe((msg) => {
+      if (msg.type === "report") return;
 
-        if (msg.type === "unavailable") {
-          setStreamState("offline");
-          return;
-        }
-
-        if (msg.type === "paused" && typeof msg.paused === "boolean") {
-          setPaused(msg.paused);
-          return;
-        }
-
-        if (msg.type === "report") return;
-
-        if (msg.type === "init" && msg.state && typeof msg.state === "object") {
-          const st = msg.state as Record<
-            string,
-            { status: string; lastEvent: string | null; logs: string[]; count: number }
-          >;
-          setAgents((prev) => {
-            const next = { ...prev };
-            for (const id of Object.keys(next) as AgentId[]) {
-              const a = st[id];
-              if (!a) continue;
-              next[id] = {
-                status: normalizeAgentStatus(a.status),
-                lastEvent: a.lastEvent ?? null,
-                count: typeof a.count === "number" ? a.count : 0,
-                logs: (a.logs ?? []).map((line) => ({
-                  text: line,
-                  tone: "muted" as const,
-                })),
-              };
-            }
-            return next;
-          });
-          if (typeof msg.paused === "boolean") setPaused(msg.paused);
-          requestAnimationFrame(() => {
-            for (const { id } of AGENTS) scrollBottom(id);
-          });
-          return;
-        }
-
-        if (typeof msg.agent === "string" && typeof msg.status === "string") {
-          const agentId = msg.agent as AgentId;
-          if (!AGENTS.some((a) => a.id === agentId)) return;
-          const agentStatus = normalizeAgentStatus(msg.status);
-          const message = typeof msg.message === "string" ? msg.message : "";
-          const count =
-            typeof msg.count === "number" ? msg.count : undefined;
-          const timestamp =
-            typeof msg.timestamp === "string" ? msg.timestamp : new Date().toISOString();
-          const line = `[${timestamp}] ${message}`;
-          const tone = toneForStatus(agentStatus);
-
-          setAgents((prev) => {
-            const cur = prev[agentId];
-            const logs = [...cur.logs, { text: line, tone }];
-            const trimmed = logs.length > MAX_LOG_LINES ? logs.slice(-MAX_LOG_LINES) : logs;
-            return {
-              ...prev,
-              [agentId]: {
-                ...cur,
-                status: agentStatus,
-                lastEvent: timestamp,
-                count: count !== undefined ? count : cur.count + 1,
-                logs: trimmed,
-              },
+      if (msg.type === "init" && msg.state && typeof msg.state === "object") {
+        const st = msg.state as Record<
+          string,
+          { status: string; lastEvent: string | null; logs: string[]; count: number }
+        >;
+        setAgents((prev) => {
+          const next = { ...prev };
+          for (const id of Object.keys(next) as AgentId[]) {
+            const a = st[id];
+            if (!a) continue;
+            next[id] = {
+              status: normalizeAgentStatus(a.status),
+              lastEvent: a.lastEvent ?? null,
+              count: typeof a.count === "number" ? a.count : 0,
+              logs: (a.logs ?? []).map((line) => ({
+                text: line,
+                tone: "muted" as const,
+              })),
             };
-          });
-          requestAnimationFrame(() => scrollBottom(agentId));
-        }
-      };
-      es.onerror = () => {
-        es?.close();
-        es = null;
-        if (!closed) setStreamState("offline");
-        if (closed) return;
-        attempt += 1;
-        const delay = Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5));
-        reconnectTimer = setTimeout(connect, delay);
-      };
-    };
+          }
+          return next;
+        });
+        requestAnimationFrame(() => {
+          for (const { id } of AGENTS) scrollBottom(id);
+        });
+        return;
+      }
 
-    connect();
-    return () => {
-      closed = true;
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
-      es?.close();
-    };
-  }, []);
+      if (typeof msg.agent === "string" && typeof msg.status === "string") {
+        const agentId = msg.agent as AgentId;
+        if (!AGENTS.some((a) => a.id === agentId)) return;
+        const agentStatus = normalizeAgentStatus(msg.status);
+        const message = typeof msg.message === "string" ? msg.message : "";
+        const count = typeof msg.count === "number" ? msg.count : undefined;
+        const timestamp =
+          typeof msg.timestamp === "string" ? msg.timestamp : new Date().toISOString();
+        const line = `[${timestamp}] ${message}`;
+        const tone = toneForStatus(agentStatus);
+
+        setAgents((prev) => {
+          const cur = prev[agentId];
+          const logs = [...cur.logs, { text: line, tone }];
+          const trimmed = logs.length > MAX_LOG_LINES ? logs.slice(-MAX_LOG_LINES) : logs;
+          return {
+            ...prev,
+            [agentId]: {
+              ...cur,
+              status: agentStatus,
+              lastEvent: timestamp,
+              count: count !== undefined ? count : cur.count + 1,
+              logs: trimmed,
+            },
+          };
+        });
+        requestAnimationFrame(() => scrollBottom(agentId));
+      }
+    });
+  }, [subscribe]);
 
   useEffect(() => {
     let cancelled = false;
@@ -360,7 +308,7 @@ export function AgentLogsPanel() {
 
       <div className="rounded-xl border border-ranger-border bg-ranger-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-ranger-border pb-3">
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#6b5a8a]">
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-ranger-amethyst">
             MongoDB
           </span>
           <span className="text-[10px] font-semibold uppercase tracking-widest text-ranger-muted">

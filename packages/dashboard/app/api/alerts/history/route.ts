@@ -8,12 +8,27 @@ function getQueue(): Queued[] {
   return g.__rangerAlertQueue ?? [];
 }
 
+function normalizeThreatLevelToken(s: string): string {
+  return s.trim().toUpperCase();
+}
+
+function parseLevelSet(levels: string | null): Set<string> | null {
+  if (!levels) return null;
+  const next = new Set(
+    levels
+      .split(",")
+      .map(normalizeThreatLevelToken)
+      .filter((t) => t.length > 0)
+  );
+  return next.size > 0 ? next : null;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const levels = searchParams.get("levels");
-  const levelSet = levels ? new Set(levels.split(",")) : null;
+  const levelSet = parseLevelSet(levels);
 
   function parseValidDateParam(value: string | null): Date | null {
     if (!value) return null;
@@ -34,7 +49,7 @@ export async function GET(request: Request) {
     if (validFromDate) dateFilter.$gte = validFromDate;
     if (validToDate) dateFilter.$lte = validToDate;
     if (Object.keys(dateFilter).length) filter.dispatchedAt = dateFilter;
-    if (levelSet) filter.threatLevel = { $in: [...levelSet] };
+    if (levelSet && levelSet.size > 0) filter.threatLevel = { $in: [...levelSet] };
     dbAlerts = await col.find(filter).sort({ dispatchedAt: -1 }).limit(500).toArray();
   } catch (err) {
     console.error("DB unavailable fetching alerts history", err);
@@ -47,16 +62,39 @@ export async function GET(request: Request) {
 
   // fall back to in-memory queue
   type FlatAlert = Record<string, unknown>;
+
+  function queueAlertTimeMs(a: FlatAlert): number | null {
+    const raw = a["dispatchedAt"] ?? a["receivedAt"] ?? a["timestamp"];
+    if (raw == null) return null;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string") {
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? null : d.getTime();
+    }
+    return null;
+  }
+
+  const hasDateFilter = validFromDate != null || validToDate != null;
+
   let queueAlerts: FlatAlert[] = getQueue()
     .map((q): FlatAlert => ({ ...q.alert, receivedAt: q.receivedAt }))
     .filter((a) => {
       if (typeof a["alertId"] !== "string") return false;
       if (typeof a["lat"] !== "number" || typeof a["lng"] !== "number") return false;
-      const ts = (a["dispatchedAt"] ?? a["receivedAt"]) as string | undefined;
-      const d = ts ? new Date(ts) : null;
-      if (validFromDate && d && d < validFromDate) return false;
-      if (validToDate && d && d > validToDate) return false;
-      if (levelSet && typeof a["threatLevel"] === "string" && !levelSet.has(a["threatLevel"] as string)) return false;
+
+      if (hasDateFilter) {
+        const tMs = queueAlertTimeMs(a);
+        if (tMs === null) return false;
+        if (validFromDate && tMs < validFromDate.getTime()) return false;
+        if (validToDate && tMs > validToDate.getTime()) return false;
+      }
+
+      if (levelSet && levelSet.size > 0) {
+        const tl = a["threatLevel"];
+        if (typeof tl !== "string") return false;
+        if (!levelSet.has(normalizeThreatLevelToken(tl))) return false;
+      }
+
       return true;
     })
     .reverse(); // queue is oldest-first; reverse for newest-first

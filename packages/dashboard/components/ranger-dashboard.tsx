@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Icons } from "./icons";
 import { AgentLogsPanel } from "./agent-logs-panel";
+import { useAgentStatusStream } from "./agent-status-stream";
 import type { MapSighting, MapBounds } from "./live-map";
 
 const LiveMap = dynamic(
@@ -511,6 +512,66 @@ function Sidebar({
   );
 }
 
+function mapSightingBaseId(s: Pick<MapSighting, "id" | "lat" | "lng">): string {
+  const id = s.id;
+  if (id?.startsWith("live-")) return id.slice(5);
+  if (id) return id;
+  return `${s.lat},${s.lng}`;
+}
+
+function trimSightingsPreferLive(sortedDesc: MapSighting[], cap: number): MapSighting[] {
+  if (sortedDesc.length <= cap) return sortedDesc;
+  const out = [...sortedDesc];
+  while (out.length > cap) {
+    let dropIdx = -1;
+    for (let i = out.length - 1; i >= 0; i--) {
+      if (!out[i]?.id?.startsWith("live-")) {
+        dropIdx = i;
+        break;
+      }
+    }
+    if (dropIdx === -1) out.pop();
+    else out.splice(dropIdx, 1);
+  }
+  return out;
+}
+
+function mergeHistoryAndLiveSightings(
+  fetched: MapSighting[],
+  prev: MapSighting[]
+): MapSighting[] {
+  const liveEntries = prev.filter((s) => s.id?.startsWith("live-") || !s.id);
+  const byBase = new Map<string, MapSighting>();
+
+  const consider = (s: MapSighting) => {
+    const base = mapSightingBaseId(s);
+    const cur = byBase.get(base);
+    const sLive = Boolean(s.id?.startsWith("live-"));
+    const curLive = Boolean(cur?.id?.startsWith("live-"));
+    if (!cur) {
+      byBase.set(base, s);
+      return;
+    }
+    if (sLive && !curLive) {
+      byBase.set(base, s);
+      return;
+    }
+    if (sLive === curLive) {
+      const ta = s.timestamp?.getTime() ?? 0;
+      const tb = cur.timestamp?.getTime() ?? 0;
+      if (ta >= tb) byBase.set(base, s);
+    }
+  };
+
+  for (const s of fetched) consider(s);
+  for (const s of liveEntries) consider(s);
+
+  const merged = [...byBase.values()].sort(
+    (a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0)
+  );
+  return trimSightingsPreferLive(merged, 500);
+}
+
 // ============ MAIN COMPONENT ============
 export default function RangerDashboard() {
   const breakpoint = useWindowSize();
@@ -523,6 +584,7 @@ export default function RangerDashboard() {
   const SIGHTINGS_PAGE_SIZE = 10;
   const [mapSightings, setMapSightings] = useState<MapSighting[]>([]);
   const [mapHistoryLoaded, setMapHistoryLoaded] = useState(false);
+  const [mapHistoryError, setMapHistoryError] = useState<string | null>(null);
   const [mapFitKey, setMapFitKey] = useState(0);
   const [mapSeverityFilter, setMapSeverityFilter] = useState<Set<string>>(
     new Set(["CRITICAL", "WARNING", "INFO"])
@@ -541,7 +603,7 @@ export default function RangerDashboard() {
   });
   const [guardrailActive, setGuardrailActive] = useState(true);
   const [guardrailMetricsLoading, setGuardrailMetricsLoading] = useState(true);
-  const [paused, setPaused] = useState(false);
+  const { paused, subscribe: subscribeAgentStatus } = useAgentStatusStream();
   const cardsVisible = useStaggeredMount(3, 150);
   const zonesVisible = useStaggeredMount(4, 100);
   const zoneAnimalCount = useCountUp(847, 1500);
@@ -587,7 +649,7 @@ export default function RangerDashboard() {
   useEffect(() => {
     if (!mapFilterMountedRef.current) { mapFilterMountedRef.current = true; return; }
     setMapFitKey((k) => k + 1);
-  }, [mapSeverityFilter, mapTimeRange, mapBoundsActive]);
+  }, [mapSeverityFilter, mapTimeRange]);
 
   // re-fit map when navigating to the live-map view
   useEffect(() => {
@@ -716,18 +778,19 @@ export default function RangerDashboard() {
       }
 
       setMapSightings((prev) => {
-        if (prev.some((s) => s.id === rowId || s.id === `live-${rowId}`)) return prev;
-        return [
-          {
-            id: `live-${rowId}`,
-            lat,
-            lng,
-            level: threatToMapLevel(threatLevel),
-            label: species,
-            timestamp: now,
-          },
-          ...prev,
-        ].slice(0, 500);
+        const withoutSameBase = prev.filter((s) => mapSightingBaseId(s) !== rowId);
+        const next: MapSighting = {
+          id: `live-${rowId}`,
+          lat,
+          lng,
+          level: threatToMapLevel(threatLevel),
+          label: species,
+          timestamp: now,
+        };
+        const merged = [next, ...withoutSameBase].sort(
+          (a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0)
+        );
+        return trimSightingsPreferLive(merged, 500);
       });
 
       setAgentPipeline((prev) =>
@@ -831,6 +894,9 @@ export default function RangerDashboard() {
   useEffect(() => {
     const currentId = ++mapHistoryRequestIdRef.current;
     let cancelled = false;
+    setMapHistoryLoaded(false);
+    setMapHistoryError(null);
+
     (async () => {
       try {
         const params = new URLSearchParams();
@@ -844,46 +910,59 @@ export default function RangerDashboard() {
           params.set("from", new Date(Date.now() - rangeMs[mapTimeRange]).toISOString());
         }
         const res = await fetch(`/api/alerts/history?${params.toString()}`);
-        if (!res.ok || cancelled || currentId !== mapHistoryRequestIdRef.current) return;
-        const data = (await res.json()) as { alerts?: Record<string, unknown>[] };
         if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
+
+        if (!res.ok) {
+          if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+            setMapHistoryError(`Failed to load sightings (${res.status})`);
+          }
+          return;
+        }
+
+        let data: { alerts?: Record<string, unknown>[] };
+        try {
+          data = (await res.json()) as { alerts?: Record<string, unknown>[] };
+        } catch (e) {
+          if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+            setMapHistoryError(e instanceof Error ? e.message : "Invalid response");
+          }
+          return;
+        }
+
+        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
+
         const fetched: MapSighting[] = [];
         for (const a of data.alerts ?? []) {
           if (typeof a.alertId !== "string") continue;
           if (typeof a.lat !== "number" || typeof a.lng !== "number") continue;
           const rawDate = a.dispatchedAt ?? a.receivedAt;
           const ts = rawDate ? new Date(rawDate as string) : null;
+          const validTs =
+            ts && !Number.isNaN(ts.getTime()) ? ts : undefined;
           fetched.push({
             id: a.alertId,
             lat: a.lat,
             lng: a.lng,
             level: threatToMapLevel(typeof a.threatLevel === "string" ? a.threatLevel : "INFO"),
             label: typeof a.species === "string" ? a.species : undefined,
-            timestamp: ts ?? undefined,
+            timestamp: validTs,
           });
         }
-        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
-        // replace history-based entries with fresh fetch; keep any live SSE-only entries
-        // (those arrive after page load and may not be in DB yet)
-        setMapSightings((prev) => {
-          const liveOnly = prev.filter((s) => s.id?.startsWith("live-") || !s.id);
-          const merged = [...fetched, ...liveOnly];
-          const seen = new Set<string>();
-          return merged.filter((s) => {
-            const key = s.id ?? `${s.lat},${s.lng}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }).slice(0, 500);
-        });
-      } catch { /* ignore */ }
-      finally {
+
+        setMapSightings((prev) => mergeHistoryAndLiveSightings(fetched, prev));
+
         if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+          setMapHistoryError(null);
           setMapHistoryLoaded(true);
           setMapFitKey((k) => k + 1);
         }
+      } catch (e) {
+        if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+          setMapHistoryError(e instanceof Error ? e.message : String(e));
+        }
       }
     })();
+
     return () => {
       cancelled = true;
       mapHistoryRequestIdRef.current += 1;
@@ -930,11 +1009,6 @@ export default function RangerDashboard() {
   }, []);
 
   useEffect(() => {
-    let closed = false;
-    let es: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let attempt = 0;
-
     const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     const applyAgentUpdate = (agentId: string, agentStatus: string, message: string | null) => {
@@ -953,68 +1027,35 @@ export default function RangerDashboard() {
       debounceTimers.set(agentId, timer);
     };
 
-    const connect = () => {
-      if (closed) return;
-      es?.close();
-      es = new EventSource("/api/agent-status");
-      es.onmessage = (ev: MessageEvent) => {
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(ev.data) as Record<string, unknown>;
-        } catch {
-          return;
-        }
-        attempt = 0;
+    const unsub = subscribeAgentStatus((msg) => {
+      if (msg.type === "init" && msg.state && typeof msg.state === "object") {
+        const s = msg.state as Record<string, { status: string; logs: string[] }>;
+        setAgentPipeline((prev) =>
+          prev.map((p) => {
+            const a = s[p.agentId];
+            if (!a) return p;
+            const lastLog = a.logs.at(-1) ?? null;
+            const lastMsg = lastLog ? lastLog.replace(/^\[[^\]]+\]\s*/, "") : null;
+            return { ...p, status: agentStatusLabel(a.status, lastMsg), color: agentStatusColor(a.status) };
+          })
+        );
+        return;
+      }
 
-        if (msg.type === "unavailable") return;
+      if (typeof msg.agent === "string" && typeof msg.status === "string") {
+        const agentId = msg.agent;
+        const agentStatus = msg.status;
+        const message = typeof msg.message === "string" ? msg.message : null;
+        applyAgentUpdate(agentId, agentStatus, message);
+      }
+    });
 
-        if (msg.type === "paused" && typeof msg.paused === "boolean") {
-          setPaused(msg.paused);
-          return;
-        }
-
-        if (msg.type === "init" && msg.state && typeof msg.state === "object") {
-          const s = msg.state as Record<string, { status: string; logs: string[] }>;
-          setAgentPipeline((prev) =>
-            prev.map((p) => {
-              const a = s[p.agentId];
-              if (!a) return p;
-              const lastLog = a.logs.at(-1) ?? null;
-              const lastMsg = lastLog ? lastLog.replace(/^\[[^\]]+\]\s*/, "") : null;
-              return { ...p, status: agentStatusLabel(a.status, lastMsg), color: agentStatusColor(a.status) };
-            })
-          );
-          if (typeof msg.paused === "boolean") setPaused(msg.paused);
-          return;
-        }
-
-        // per-agent update: { agent, message, status, count, timestamp }
-        if (typeof msg.agent === "string" && typeof msg.status === "string") {
-          const agentId = msg.agent;
-          const agentStatus = msg.status;
-          const message = typeof msg.message === "string" ? msg.message : null;
-          applyAgentUpdate(agentId, agentStatus, message);
-        }
-      };
-      es.onerror = () => {
-        es?.close();
-        es = null;
-        if (closed) return;
-        attempt += 1;
-        const delay = Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5));
-        reconnectTimer = setTimeout(connect, delay);
-      };
-    };
-
-    connect();
     return () => {
-      closed = true;
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      unsub();
       for (const t of debounceTimers.values()) clearTimeout(t);
       debounceTimers.clear();
-      es?.close();
     };
-  }, []);
+  }, [subscribeAgentStatus]);
 
   if (breakpoint === null) {
     return (
@@ -1221,7 +1262,12 @@ export default function RangerDashboard() {
                   </span>
                 </div>
 
-                {!mapHistoryLoaded ? (
+                {mapHistoryError ? (
+                  <div className="flex h-[min(70vh,560px)] w-full flex-col items-center justify-center gap-2 rounded-xl border border-ranger-border bg-ranger-card px-6 text-center">
+                    <span className="text-sm font-medium text-ranger-apricot">Could not load map history</span>
+                    <span className="text-xs text-ranger-muted">{mapHistoryError}</span>
+                  </div>
+                ) : !mapHistoryLoaded ? (
                   <div className="flex h-[min(70vh,560px)] w-full items-center justify-center rounded-xl border border-ranger-border bg-ranger-card">
                     <span className="text-sm text-ranger-muted">Loading sightings…</span>
                   </div>
