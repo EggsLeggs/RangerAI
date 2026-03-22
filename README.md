@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="#quickstart">Quickstart</a> · <a href="#architecture">Architecture</a> · <a href="#environment-variables">Env Vars</a> · <a href="https://docs.google.com/presentation/d/PITCH_DECK_ID">Pitch Deck</a>
+  <a href="#quickstart">Quickstart</a> · <a href="#architecture">Architecture</a> · <a href="#environment-variables">Env Vars</a> · <a href="https://www.canva.com/design/DAHEgfi8mJI/esZfDGySE5J-ViyFpqayCQ/edit?utm_content=DAHEgfi8mJI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton">Pitch Deck</a>
 </p>
 
 ---
