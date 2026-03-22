@@ -107,7 +107,7 @@ export function Sidebar({
             id={panelId}
             role="region"
             aria-label="Notifications"
-            className="absolute bottom-full left-0 right-0 mb-1 mx-2 rounded-xl border border-ranger-border bg-ranger-card shadow-xl z-50 max-h-80 flex flex-col"
+            className="absolute bottom-full left-0 mb-1 mx-2 w-[22rem] rounded-xl border border-ranger-border bg-ranger-card shadow-xl z-50 max-h-96 flex flex-col"
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-ranger-border">
               <span className="text-sm font-medium text-ranger-text">Notifications</span>
