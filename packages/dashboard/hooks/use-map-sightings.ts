@@ -100,6 +100,7 @@ export function useMapSightings(
             ts && !Number.isNaN(ts.getTime()) ? ts : undefined;
           fetched.push({
             id: a.alertId,
+            alertId: a.alertId,
             lat: a.lat,
             lng: a.lng,
             level: threatToMapLevel(typeof a.threatLevel === "string" ? a.threatLevel : "INFO"),

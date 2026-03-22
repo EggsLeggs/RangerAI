@@ -2,7 +2,7 @@ node_modules/
 tmp/
 .env*
 !.env.example
-reports/
+/reports/
 .next/
 dist/
 *.js.map

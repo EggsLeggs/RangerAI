@@ -82,6 +82,7 @@ export function useAlertStream(
         return [
           {
             id: rowId,
+            alertId: rowId,
             zone: zoneIdFromCoords(lat, lng),
             species,
             threat: threatLevel,
@@ -107,6 +108,7 @@ export function useAlertStream(
         const withoutSameBase = prev.filter((s) => mapSightingBaseId(s) !== rowId);
         const next: MapSighting = {
           id: `live-${rowId}`,
+          alertId: rowId,
           lat,
           lng,
           level: threatToMapLevel(threatLevel),
@@ -192,6 +194,7 @@ export function useAlertStream(
             if (!receivedAt || isNaN(receivedAt.getTime()) || receivedAt.toDateString() !== today) continue;
             rows.push({
               id: a.alertId,
+              alertId: a.alertId,
               zone: zoneIdFromCoords(a.lat, a.lng),
               species: a.species,
               threat: typeof a.threatLevel === "string" ? a.threatLevel : "INFO",

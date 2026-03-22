@@ -8,6 +8,7 @@ export type MapSightingSeverity = "CRITICAL" | "WARNING" | "INFO";
 
 export interface MapSighting {
   id?: string;
+  alertId?: string;
   lat: number;
   lng: number;
   level: MapSightingSeverity;
@@ -31,10 +32,12 @@ const SEVERITY_COLOR: Record<MapSightingSeverity, string> = {
 export function LiveMap({
   sightings,
   onBoundsChange,
+  onPinClick,
   fitKey,
 }: {
   sightings: MapSighting[];
   onBoundsChange?: (bounds: MapBounds) => void;
+  onPinClick?: (sighting: MapSighting) => void;
   fitKey?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,6 +112,7 @@ export function LiveMap({
         }
         m.bindPopup(el);
       }
+      m.on("click", () => onPinClick?.(s));
       markers.push(m);
     }
     const shouldFit = fitKey !== undefined && fitKey !== lastFitKeyRef.current;
@@ -122,7 +126,7 @@ export function LiveMap({
         mapRef.current.fitBounds(group.getBounds().pad(0.25));
       });
     }
-  }, [sightings, fitKey]);
+  }, [sightings, fitKey, onPinClick]);
 
   return (
     <div

@@ -2,6 +2,7 @@ export type Breakpoint = "mobile" | "tablet" | "desktop";
 
 export interface RecentSightingRow {
   id: string;
+  alertId?: string;
   zone: string;
   species: string;
   threat: string;

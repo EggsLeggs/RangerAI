@@ -12,12 +12,12 @@ export const INITIAL_AGENT_PIPELINE: AgentPipelineEntry[] = [
 ];
 
 export const INITIAL_RECENT_SIGHTINGS: RecentSightingRow[] = [
-  { id: "init-0", zone: "ZN-01", species: "African Elephant", threat: "INFO", time: "2 mins ago" },
-  { id: "init-1", zone: "ZN-03", species: "Lion Pride", threat: "WARNING", time: "8 mins ago" },
-  { id: "init-2", zone: "ZN-02", species: "Cape Buffalo", threat: "INFO", time: "15 mins ago" },
-  { id: "init-3", zone: "ZN-07", species: "Leopard", threat: "CRITICAL", time: "22 mins ago" },
-  { id: "init-4", zone: "ZN-04", species: "Cheetah", threat: "WARNING", time: "31 mins ago" },
-  { id: "init-5", zone: "ZN-09", species: "Black Rhino", threat: "CRITICAL", time: "45 mins ago" },
+  { id: "init-0", alertId: "init-0", zone: "ZN-01", species: "African Elephant", threat: "INFO", time: "2 mins ago" },
+  { id: "init-1", alertId: "init-1", zone: "ZN-03", species: "Lion Pride", threat: "WARNING", time: "8 mins ago" },
+  { id: "init-2", alertId: "init-2", zone: "ZN-02", species: "Cape Buffalo", threat: "INFO", time: "15 mins ago" },
+  { id: "init-3", alertId: "init-3", zone: "ZN-07", species: "Leopard", threat: "CRITICAL", time: "22 mins ago" },
+  { id: "init-4", alertId: "init-4", zone: "ZN-04", species: "Cheetah", threat: "WARNING", time: "31 mins ago" },
+  { id: "init-5", alertId: "init-5", zone: "ZN-09", species: "Black Rhino", threat: "CRITICAL", time: "45 mins ago" },
 ];
 
 export const CHART = {

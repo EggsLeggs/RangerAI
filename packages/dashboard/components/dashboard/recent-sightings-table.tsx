@@ -10,10 +10,14 @@ export function RecentSightingsTable({
   sightings,
   page,
   onPageChange,
+  onGenerateReport,
+  generatingAlertId,
 }: {
   sightings: RecentSightingRow[];
   page: number;
   onPageChange: (page: number) => void;
+  onGenerateReport: (alertId: string, species: string) => void;
+  generatingAlertId: string | null;
 }) {
   const totalPages = Math.ceil(sightings.length / SIGHTINGS_PAGE_SIZE);
 
@@ -33,14 +37,35 @@ export function RecentSightingsTable({
               <th className="pb-3 pr-4">Species</th>
               <th className="pb-3 pr-4">Threat</th>
               <th className="pb-3 pr-4">Time</th>
-              <th className="pb-3">Action</th>
+              <th className="pb-3 w-5" />
             </tr>
           </thead>
           <tbody>
-            {sightings.slice(page * SIGHTINGS_PAGE_SIZE, (page + 1) * SIGHTINGS_PAGE_SIZE).map((sighting) => (
+            {sightings.slice(page * SIGHTINGS_PAGE_SIZE, (page + 1) * SIGHTINGS_PAGE_SIZE).map((sighting) => {
+              const alertId = sighting.alertId ?? sighting.id;
+              const isGenerating = generatingAlertId === alertId;
+              const isDisabled = generatingAlertId !== null && !isGenerating;
+              return (
               <tr
                 key={sighting.id}
-                className="border-b border-ranger-border/50 last:border-0"
+                role="button"
+                tabIndex={isDisabled ? -1 : 0}
+                aria-label={isGenerating ? `Generating report for ${sighting.species}` : `Open report for ${sighting.species}`}
+                aria-disabled={isDisabled}
+                onClick={() => !isDisabled && onGenerateReport(alertId, sighting.species)}
+                onKeyDown={(e) => {
+                  if (!isDisabled && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onGenerateReport(alertId, sighting.species);
+                  }
+                }}
+                className={`border-b border-ranger-border/50 last:border-0 transition-colors ${
+                  isDisabled
+                    ? "cursor-not-allowed opacity-50"
+                    : isGenerating
+                      ? "cursor-wait bg-ranger-border/10"
+                      : "cursor-pointer hover:bg-ranger-border/20"
+                }`}
               >
                 <td className="py-3 pr-4 w-28 text-sm text-ranger-muted">{sighting.zone}</td>
                 <td className="py-3 pr-4">
@@ -50,20 +75,15 @@ export function RecentSightingsTable({
                   <ThreatBadge level={sighting.threat} />
                 </td>
                 <td className="py-3 pr-4 text-sm text-ranger-muted">{sighting.time}</td>
-                <td className="py-3">
-                  {/* TODO: wire to a context menu or detail drawer */}
-                  <button
-                    type="button"
-                    aria-label="More options"
-                    disabled
-                    aria-disabled="true"
-                    className="cursor-not-allowed text-ranger-muted opacity-40"
-                  >
-                    <Icons.MoreVertical />
-                  </button>
+                <td className="py-3 w-5 text-ranger-muted">
+                  {isGenerating ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border border-ranger-muted border-t-transparent inline-block" />
+                  ) : (
+                    <Icons.Report />
+                  )}
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

@@ -28,6 +28,7 @@ export function LiveMapView({
   boundsActive,
   onBoundsActiveChange,
   onBoundsChange,
+  onPinClick,
 }: {
   filteredSightings: MapSighting[];
   allSightingsCount: number;
@@ -41,6 +42,7 @@ export function LiveMapView({
   boundsActive: boolean;
   onBoundsActiveChange: (active: boolean) => void;
   onBoundsChange: (bounds: MapBounds) => void;
+  onPinClick?: (sighting: MapSighting) => void;
 }) {
   return (
     <div>
@@ -149,6 +151,7 @@ export function LiveMapView({
           <LiveMap
             sightings={filteredSightings}
             onBoundsChange={onBoundsChange}
+            onPinClick={onPinClick}
             fitKey={fitKey}
           />
           {filteredSightings.length === 0 && (

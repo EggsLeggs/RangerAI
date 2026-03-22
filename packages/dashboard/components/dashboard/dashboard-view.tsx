@@ -16,6 +16,8 @@ export function DashboardView({
   recentSightings,
   sightingsPage,
   onSightingsPageChange,
+  onGenerateReport,
+  generatingAlertId,
 }: {
   isMobile: boolean;
   isDesktop: boolean;
@@ -23,6 +25,8 @@ export function DashboardView({
   recentSightings: RecentSightingRow[];
   sightingsPage: number;
   onSightingsPageChange: (page: number) => void;
+  onGenerateReport: (alertId: string, species: string) => void;
+  generatingAlertId: string | null;
 }) {
   const [frequencyTab, setFrequencyTab] = useState("7 Days");
   const cardsVisible = useStaggeredMount(3, 150);
@@ -75,6 +79,8 @@ export function DashboardView({
           sightings={recentSightings}
           page={sightingsPage}
           onPageChange={onSightingsPageChange}
+          onGenerateReport={onGenerateReport}
+          generatingAlertId={generatingAlertId}
         />
       </div>
     </>

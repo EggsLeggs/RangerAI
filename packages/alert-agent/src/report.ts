@@ -3,6 +3,7 @@ import path from "node:path";
 import { generateText } from "ai";
 import { openai as aiSdkOpenai } from "@ai-sdk/openai";
 import OpenAI from "openai";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { type ScoredSighting, ThreatLevel } from "@rangerai/shared";
 
 const REPORTS_DIR = path.resolve(process.cwd(), "reports");
@@ -550,9 +551,43 @@ function buildHtml(params: {
 </html>`;
 }
 
+async function uploadReportToS3(filename: string, html: string): Promise<boolean> {
+  const endpoint = process.env.S3_ENDPOINT?.trim();
+  const region = process.env.S3_REGION?.trim() ?? "auto";
+  const bucket = process.env.S3_BUCKET?.trim();
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY?.trim();
+
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+    return false;
+  }
+
+  try {
+    const client = new S3Client({
+      endpoint,
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+      forcePathStyle: true,
+    });
+
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: filename,
+      Body: html,
+      ContentType: "text/html; charset=utf-8",
+    }));
+
+    console.log(`[alert-agent] report uploaded to S3: ${filename}`);
+    return true;
+  } catch (err) {
+    console.warn(`[alert-agent] S3 upload failed for "${filename}": ${String(err)}`);
+    return false;
+  }
+}
+
 export async function generateReport(
   sightings: ScoredSighting[]
-): Promise<string> {
+): Promise<{ filePath: string; uploadedToS3: boolean }> {
   if (sightings.length === 0) {
     throw new Error("generateReport requires at least one sighting");
   }
@@ -582,7 +617,9 @@ export async function generateReport(
   const filePath = path.join(REPORTS_DIR, filename);
 
   await fs.writeFile(filePath, html, "utf8");
-
   console.log(`[alert-agent] report saved to ${filePath}`);
-  return filePath;
+
+  const uploadedToS3 = await uploadReportToS3(filename, html);
+
+  return { filePath, uploadedToS3 };
 }
