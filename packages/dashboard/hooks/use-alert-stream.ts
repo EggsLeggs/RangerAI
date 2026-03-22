@@ -185,10 +185,13 @@ export function useAlertStream(
         const data = (await res.json()) as { alerts?: Record<string, unknown>[] };
         const today = new Date().toDateString();
         const rows: RecentSightingRow[] = [];
+        const seenRowIds = new Set<string>();
         if (data.alerts?.length) {
           for (const a of data.alerts) {
             if (typeof a.alertId !== "string" || typeof a.species !== "string") continue;
             if (typeof a.lat !== "number" || typeof a.lng !== "number") continue;
+            if (seenRowIds.has(a.alertId)) continue;
+            seenRowIds.add(a.alertId);
             const rawDate = a.dispatchedAt ?? a.receivedAt;
             const receivedAt = rawDate ? new Date(rawDate as string) : null;
             if (!receivedAt || isNaN(receivedAt.getTime()) || receivedAt.toDateString() !== today) continue;

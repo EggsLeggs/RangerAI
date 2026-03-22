@@ -8,6 +8,10 @@ import { useAgentPipeline } from "../hooks/use-agent-pipeline";
 import { useAlertStream } from "../hooks/use-alert-stream";
 import { useMapSightings } from "../hooks/use-map-sightings";
 import { useGuardrailMetrics } from "../hooks/use-guardrail-metrics";
+import { useStats } from "../hooks/use-stats";
+import { useZoneHealth } from "../hooks/use-zone-health";
+import { useSightingActivity } from "../hooks/use-sighting-activity";
+import { useSightingFrequency } from "../hooks/use-sighting-frequency";
 import { useReportGenerator } from "../hooks/use-report-generator";
 import { Sidebar } from "./dashboard/sidebar";
 import { Header } from "./dashboard/header";
@@ -78,6 +82,20 @@ export default function RangerDashboard() {
       triggerReport(sighting.alertId, sighting.label ?? "Unknown species");
     }
   }, [triggerReport]);
+
+  const { activeZones, speciesTracked, loading: statsLoading, error: statsError } = useStats({ alertCount: alertsToday });
+  const { zones, totalAnimals, loading: zonesLoading } = useZoneHealth({ alertCount: alertsToday });
+
+  const [activityDays, setActivityDays] = useState(7);
+  const [activityZone, setActivityZone] = useState("all");
+  const { series: activitySeries, loading: activityLoading } = useSightingActivity({
+    days: activityDays,
+    zone: activityZone,
+  });
+
+  const [frequencyTab, setFrequencyTab] = useState("7 Days");
+  const { series: frequencySeries, species: frequencySpecies, loading: frequencyLoading } =
+    useSightingFrequency({ tab: frequencyTab });
 
   // re-fit map when navigating to the live-map view
   useEffect(() => {
@@ -205,6 +223,7 @@ export default function RangerDashboard() {
                 boundsActive={mapBoundsActive}
                 onBoundsActiveChange={setMapBoundsActive}
                 onBoundsChange={setMapBounds}
+                zones={zones}
                 onPinClick={onPinClick}
               />
             ) : (
@@ -212,9 +231,25 @@ export default function RangerDashboard() {
                 isMobile={isMobile}
                 isDesktop={isDesktop}
                 alertsToday={alertsToday}
+                activeZones={activeZones}
+                speciesTracked={speciesTracked}
+                statsLoading={statsLoading}
+                statsError={statsError}
                 recentSightings={recentSightings}
                 sightingsPage={sightingsPage}
                 onSightingsPageChange={setSightingsPage}
+                zones={zones}
+                totalAnimals={totalAnimals}
+                zonesLoading={zonesLoading}
+                activitySeries={activitySeries}
+                activityLoading={activityLoading}
+                onZoneChange={setActivityZone}
+                onDaysChange={setActivityDays}
+                frequencySeries={frequencySeries}
+                frequencySpecies={frequencySpecies}
+                frequencyLoading={frequencyLoading}
+                frequencyTab={frequencyTab}
+                onFrequencyTabChange={setFrequencyTab}
                 onGenerateReport={triggerReport}
                 generatingAlertId={generating}
               />

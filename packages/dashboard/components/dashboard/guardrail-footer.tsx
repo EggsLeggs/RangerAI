@@ -14,7 +14,7 @@ export function GuardrailFooter({
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-40 flex h-10 items-center justify-between border-t border-ranger-border bg-ranger-footer px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${active ? "bg-ranger-moss" : "bg-ranger-muted"}`} />
+        <span className={`h-2 w-2 rounded-full ${active ? "bg-ranger-moss animate-pulse" : "bg-ranger-muted"}`} />
         <img src="/civic-logo.png" alt="Civic" className="h-4 w-auto opacity-80" />
         <span className="font-mono text-xs uppercase tracking-widest text-ranger-muted">
           {active ? "Guardrails Active" : "Guardrails Unavailable"}

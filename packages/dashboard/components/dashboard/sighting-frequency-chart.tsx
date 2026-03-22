@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -13,21 +12,26 @@ import {
 } from "recharts";
 import { Card } from "../ui/card";
 import { CHART } from "../../lib/constants";
-import { getPointsForFrequency, buildFrequencySeries } from "../../lib/sighting-helpers";
+import type { FrequencyPoint } from "../../hooks/use-sighting-frequency";
+
+const LINE_COLOURS = ["#1C2417", "#B86F0A", "#4a7c5a", "#5a9fd4", "#d45a5a"] as const;
 
 export function SightingFrequencyChart({
   frequencyTab,
   onTabChange,
+  series,
+  species,
+  loading,
 }: {
   frequencyTab: string;
   onTabChange: (tab: string) => void;
+  series: FrequencyPoint[];
+  species: string[];
+  loading: boolean;
 }) {
-  const pointsToShow = getPointsForFrequency(frequencyTab);
-  const frequencyChartData = useMemo(
-    () => buildFrequencySeries(pointsToShow),
-    [pointsToShow]
-  );
-  const frequencyXInterval = Math.max(0, Math.min(47, Math.floor(pointsToShow / 12) - 1));
+  const pointsToShow = series.length;
+  // show ~8 labels regardless of window size
+  const frequencyXInterval = pointsToShow <= 8 ? 0 : Math.ceil(pointsToShow / 8) - 1;
 
   return (
     <Card className="p-5">
@@ -50,63 +54,54 @@ export function SightingFrequencyChart({
         ))}
       </div>
       <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={frequencyChartData}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={CHART.grid}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="hour"
-              tick={{ fill: CHART.axis, fontSize: 10 }}
-              tickLine={{ stroke: CHART.grid }}
-              axisLine={{ stroke: CHART.grid }}
-              interval={frequencyXInterval}
-            />
-            <YAxis
-              tick={{ fill: CHART.axis, fontSize: 10 }}
-              tickLine={{ stroke: CHART.grid }}
-              axisLine={{ stroke: CHART.grid }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: CHART.tooltipBg,
-                border: `1px solid ${CHART.tooltipBorder}`,
-                borderRadius: "8px",
-                color: CHART.tooltipText,
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: 11, color: CHART.axis }} />
-            <Line
-              type="monotone"
-              dataKey="elephant"
-              stroke={CHART.line1}
-              strokeWidth={2}
-              dot={false}
-              name="Elephant"
-              animationDuration={1000}
-            />
-            <Line
-              type="monotone"
-              dataKey="lion"
-              stroke={CHART.line2}
-              strokeWidth={2}
-              dot={false}
-              name="Lion"
-              animationDuration={1000}
-            />
-            <Line
-              type="monotone"
-              dataKey="rhino"
-              stroke={CHART.line3}
-              strokeWidth={2}
-              dot={false}
-              name="Rhino"
-              animationDuration={1000}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {species.length === 0 && !loading ? (
+          <div className="flex h-full items-center justify-center text-sm text-ranger-muted">
+            no sighting data yet
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={series}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={CHART.grid}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="day"
+                tick={{ fill: CHART.axis, fontSize: 10 }}
+                tickLine={{ stroke: CHART.grid }}
+                axisLine={{ stroke: CHART.grid }}
+                interval={frequencyXInterval}
+              />
+              <YAxis
+                tick={{ fill: CHART.axis, fontSize: 10 }}
+                tickLine={{ stroke: CHART.grid }}
+                axisLine={{ stroke: CHART.grid }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: CHART.tooltipBg,
+                  border: `1px solid ${CHART.tooltipBorder}`,
+                  borderRadius: "8px",
+                  color: CHART.tooltipText,
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: 11, color: CHART.axis }} />
+              {species.map((s, i) => (
+                <Line
+                  key={s}
+                  type="monotone"
+                  dataKey={s}
+                  stroke={LINE_COLOURS[i % LINE_COLOURS.length]}
+                  strokeWidth={2}
+                  dot={false}
+                  name={s}
+                  animationDuration={1000}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </Card>
   );

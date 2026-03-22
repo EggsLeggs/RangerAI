@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Icons } from "../icons";
 import { Separator } from "../ui/separator";
 import type { MapSighting, MapBounds } from "../live-map";
+import type { ZoneData } from "../../hooks/use-zone-health";
 
 const LiveMap = dynamic(
   () => import("../live-map").then((m) => m.LiveMap),
@@ -28,6 +30,7 @@ export function LiveMapView({
   boundsActive,
   onBoundsActiveChange,
   onBoundsChange,
+  zones,
   onPinClick,
 }: {
   filteredSightings: MapSighting[];
@@ -42,8 +45,12 @@ export function LiveMapView({
   boundsActive: boolean;
   onBoundsActiveChange: (active: boolean) => void;
   onBoundsChange: (bounds: MapBounds) => void;
+  zones: ZoneData[];
   onPinClick?: (sighting: MapSighting) => void;
 }) {
+  const [zonesOverlay, setZonesOverlay] = useState(true);
+  const [hoveredZone, setHoveredZone] = useState<{ id: string; color: string } | null>(null);
+
   return (
     <div>
       {/* Filter toolbar */}
@@ -99,6 +106,22 @@ export function LiveMapView({
 
         <Separator orientation="vertical" />
 
+        {/* Zone overlay toggle */}
+        {zones.length > 0 && (
+          <button
+            onClick={() => setZonesOverlay((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+              zonesOverlay
+                ? "border-ranger-moss/60 bg-ranger-moss/10 text-ranger-moss"
+                : "border-ranger-border text-ranger-muted hover:text-ranger-text"
+            }`}
+            title="Toggle zone health overlay"
+          >
+            <Icons.Zone />
+            Zones
+          </button>
+        )}
+
         {/* Area filter toggle */}
         <button
           onClick={() => onBoundsActiveChange(!boundsActive)}
@@ -153,7 +176,51 @@ export function LiveMapView({
             onBoundsChange={onBoundsChange}
             onPinClick={onPinClick}
             fitKey={fitKey}
+            hoveredZone={hoveredZone}
           />
+
+          {/* Zone health overlay */}
+          {zonesOverlay && zones.length > 0 && (
+            <div className="absolute right-3 top-3 z-[1000] w-52 rounded-xl border border-ranger-border bg-ranger-card/95 p-3 shadow-lg backdrop-blur-sm">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ranger-muted">
+                Zone Health
+              </div>
+              <div className="max-h-56 space-y-1 overflow-y-auto">
+                {zones.map((z) => {
+                  const isHovered = hoveredZone?.id === z.id;
+                  return (
+                    <div
+                      key={z.id}
+                      onMouseEnter={() => setHoveredZone({ id: z.id, color: z.color })}
+                      onMouseLeave={() => setHoveredZone(null)}
+                      className={`cursor-default rounded-lg px-1.5 py-1 transition-colors ${isHovered ? "bg-ranger-border/50" : "hover:bg-ranger-border/30"}`}
+                    >
+                      <div className="mb-0.5 flex items-center justify-between gap-1 text-xs">
+                        <span className="truncate text-ranger-text" title={z.name}>{z.name}</span>
+                        <span className="shrink-0 text-ranger-muted">{z.coverage}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {z.atRisk && (
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: z.color }}
+                            title="At risk"
+                          />
+                        )}
+                        <div className="h-1 flex-1 rounded-full bg-ranger-border">
+                          <div
+                            className="h-1 rounded-full transition-all duration-700"
+                            style={{ width: `${z.coverage}%`, backgroundColor: z.color }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {filteredSightings.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="pointer-events-auto rounded-xl border border-ranger-border bg-ranger-card/95 px-5 py-4 text-center shadow-lg backdrop-blur-sm">

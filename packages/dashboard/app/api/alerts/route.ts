@@ -3,6 +3,53 @@ export const runtime = "nodejs";
 
 const MAX_QUEUE = 500;
 
+// ── zone helpers ────────────────────────────────────────────────────────────
+
+function zoneIdFromCoords(lat: number, lng: number): string {
+  const n = Math.abs(Math.floor(lat * 10 + lng * 10)) % 99;
+  return "ZN-" + String(n).padStart(2, "0");
+}
+
+function getZoneNameCache(): Map<string, string> {
+  const g = globalThis as typeof globalThis & { __rangerZoneNameCache?: Map<string, string> };
+  if (!g.__rangerZoneNameCache) g.__rangerZoneNameCache = new Map();
+  return g.__rangerZoneNameCache;
+}
+
+interface NominatimAddress {
+  national_park?: string;
+  nature_reserve?: string;
+  protected_area?: string;
+  village?: string;
+  town?: string;
+  city?: string;
+  county?: string;
+  state?: string;
+  country?: string;
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "RangerAI/1.0 wildlife-monitoring" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { address?: NominatimAddress };
+    const a = data.address;
+    if (!a) return null;
+    const place =
+      a.national_park ?? a.nature_reserve ?? a.protected_area ??
+      a.village ?? a.town ?? a.city ?? a.county ?? a.state;
+    if (place && a.country) return `${place}, ${a.country}`;
+    if (a.country) return a.country;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 type SseSender = (payload: unknown) => void;
 
 function getSseClients(): Set<SseSender> {
@@ -87,11 +134,36 @@ export async function POST(req: Request) {
 
   (async () => {
     try {
+      const lat = body["lat"] as number;
+      const lng = body["lng"] as number;
+      const zoneId = zoneIdFromCoords(lat, lng);
+
+      const cache = getZoneNameCache();
+      if (!cache.has(zoneId)) {
+        const name = await reverseGeocode(lat, lng);
+        if (name) cache.set(zoneId, name);
+      }
+      const zoneName = cache.get(zoneId);
+
       const { getCollection, COLLECTIONS } = await import("@rangerai/shared/db");
       const col = await getCollection(COLLECTIONS.ALERTS);
+      const dispatchedAtRaw = (body as Record<string, unknown>).dispatchedAt;
+      const dispatchedAt =
+        dispatchedAtRaw instanceof Date
+          ? dispatchedAtRaw
+          : typeof dispatchedAtRaw === "string"
+            ? new Date(dispatchedAtRaw)
+            : new Date();
+      const doc: Record<string, unknown> = {
+        ...body,
+        dispatchedAt,
+        receivedAt: new Date(receivedAt),
+        zoneId,
+      };
+      if (zoneName) doc["zoneName"] = zoneName;
       await col.updateOne(
         { alertId: body.alertId },
-        { $set: { ...body, receivedAt } },
+        { $set: doc },
         { upsert: true }
       );
     } catch { /* db write must not crash SSE */ }
