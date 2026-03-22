@@ -3,7 +3,9 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Icons } from "./icons";
-import type { MapSighting } from "./live-map";
+import { AgentLogsPanel } from "./agent-logs-panel";
+import { useAgentStatusStream } from "./agent-status-stream";
+import type { MapSighting, MapBounds } from "./live-map";
 
 const LiveMap = dynamic(
   () => import("./live-map").then((m) => m.LiveMap),
@@ -134,7 +136,7 @@ function useStaggeredMount(itemCount: number, baseDelay: number = 100) {
 }
 
 // ============ DATA ============
-type DashboardView = "dashboard" | "live-map";
+type DashboardView = "dashboard" | "live-map" | "agent-logs";
 
 const INITIAL_AGENT_PIPELINE = [
   { agentId: "ingest", name: "Ingest Agent", status: "Idle", color: "#4a7c5a" },
@@ -211,14 +213,6 @@ const INITIAL_RECENT_SIGHTINGS: RecentSightingRow[] = [
   { id: "init-5", zone: "ZN-09", species: "Black Rhino", threat: "CRITICAL", time: "45 mins ago" },
 ];
 
-const DEMO_MAP_SIGHTINGS: MapSighting[] = [
-  { lat: -2.15, lng: 34.75, level: "INFO", label: "African Elephant" },
-  { lat: -2.4, lng: 35.0, level: "WARNING", label: "Lion Pride" },
-  { lat: -2.3, lng: 34.9, level: "INFO", label: "Cape Buffalo" },
-  { lat: -2.5, lng: 34.8, level: "CRITICAL", label: "Leopard" },
-  { lat: -2.2, lng: 35.1, level: "WARNING", label: "Cheetah" },
-  { lat: -2.45, lng: 34.7, level: "CRITICAL", label: "Black Rhino" },
-];
 
 function getPointsForFrequency(tab: string): number {
   switch (tab) {
@@ -450,7 +444,7 @@ function Sidebar({
             </div>
             {section.items.map((item) => (
               <button
-                key={item.name}
+                key={`${section.title}-${item.name}`}
                 type="button"
                 onClick={() => {
                   item.onSelect?.();
@@ -518,6 +512,66 @@ function Sidebar({
   );
 }
 
+function mapSightingBaseId(s: Pick<MapSighting, "id" | "lat" | "lng">): string {
+  const id = s.id;
+  if (id?.startsWith("live-")) return id.slice(5);
+  if (id) return id;
+  return `${s.lat},${s.lng}`;
+}
+
+function trimSightingsPreferLive(sortedDesc: MapSighting[], cap: number): MapSighting[] {
+  if (sortedDesc.length <= cap) return sortedDesc;
+  const out = [...sortedDesc];
+  while (out.length > cap) {
+    let dropIdx = -1;
+    for (let i = out.length - 1; i >= 0; i--) {
+      if (!out[i]?.id?.startsWith("live-")) {
+        dropIdx = i;
+        break;
+      }
+    }
+    if (dropIdx === -1) out.pop();
+    else out.splice(dropIdx, 1);
+  }
+  return out;
+}
+
+function mergeHistoryAndLiveSightings(
+  fetched: MapSighting[],
+  prev: MapSighting[]
+): MapSighting[] {
+  const liveEntries = prev.filter((s) => s.id?.startsWith("live-") || !s.id);
+  const byBase = new Map<string, MapSighting>();
+
+  const consider = (s: MapSighting) => {
+    const base = mapSightingBaseId(s);
+    const cur = byBase.get(base);
+    const sLive = Boolean(s.id?.startsWith("live-"));
+    const curLive = Boolean(cur?.id?.startsWith("live-"));
+    if (!cur) {
+      byBase.set(base, s);
+      return;
+    }
+    if (sLive && !curLive) {
+      byBase.set(base, s);
+      return;
+    }
+    if (sLive === curLive) {
+      const ta = s.timestamp?.getTime() ?? 0;
+      const tb = cur.timestamp?.getTime() ?? 0;
+      if (ta >= tb) byBase.set(base, s);
+    }
+  };
+
+  for (const s of fetched) consider(s);
+  for (const s of liveEntries) consider(s);
+
+  const merged = [...byBase.values()].sort(
+    (a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0)
+  );
+  return trimSightingsPreferLive(merged, 500);
+}
+
 // ============ MAIN COMPONENT ============
 export default function RangerDashboard() {
   const breakpoint = useWindowSize();
@@ -528,7 +582,18 @@ export default function RangerDashboard() {
   const [recentSightings, setRecentSightings] = useState(INITIAL_RECENT_SIGHTINGS);
   const [sightingsPage, setSightingsPage] = useState(0);
   const SIGHTINGS_PAGE_SIZE = 10;
-  const [mapSightings, setMapSightings] = useState<MapSighting[]>(DEMO_MAP_SIGHTINGS);
+  const [mapSightings, setMapSightings] = useState<MapSighting[]>([]);
+  const [mapHistoryLoaded, setMapHistoryLoaded] = useState(false);
+  const [mapHistoryError, setMapHistoryError] = useState<string | null>(null);
+  const [mapFitKey, setMapFitKey] = useState(0);
+  const [mapSeverityFilter, setMapSeverityFilter] = useState<Set<string>>(
+    new Set(["CRITICAL", "WARNING", "INFO"])
+  );
+  const [mapTimeRange, setMapTimeRange] = useState<"1h" | "6h" | "24h" | "7d" | "all">("all");
+  const [mapBoundsActive, setMapBoundsActive] = useState(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const mapFilterMountedRef = useRef(false);
+  const mapHistoryRequestIdRef = useRef(0);
   const [streamLive, setStreamLive] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [guardrailMetrics, setGuardrailMetrics] = useState({
@@ -538,7 +603,7 @@ export default function RangerDashboard() {
   });
   const [guardrailActive, setGuardrailActive] = useState(true);
   const [guardrailMetricsLoading, setGuardrailMetricsLoading] = useState(true);
-  const [paused, setPaused] = useState(false);
+  const { paused, subscribe: subscribeAgentStatus } = useAgentStatusStream();
   const cardsVisible = useStaggeredMount(3, 150);
   const zonesVisible = useStaggeredMount(4, 100);
   const zoneAnimalCount = useCountUp(847, 1500);
@@ -552,6 +617,46 @@ export default function RangerDashboard() {
 
   const [alertsToday, setAlertsToday] = useState(0);
   const todayAlertIdsRef = useRef<Set<string>>(new Set());
+
+  const filteredMapSightings = useMemo(() => {
+    const now = Date.now();
+    const rangeMs: Record<string, number> = {
+      "1h":  1 * 60 * 60_000,
+      "6h":  6 * 60 * 60_000,
+      "24h": 24 * 60 * 60_000,
+      "7d":  7 * 24 * 60 * 60_000,
+      "all": Infinity,
+    };
+    const cutoff = mapTimeRange === "all" ? 0 : now - rangeMs[mapTimeRange];
+
+    return mapSightings.filter((s) => {
+      if (!mapSeverityFilter.has(s.level)) return false;
+      const ts = s.timestamp ? s.timestamp.getTime() : now;
+      if (ts < cutoff) return false;
+      if (mapBoundsActive && mapBounds) {
+        if (
+          s.lat < mapBounds.south ||
+          s.lat > mapBounds.north ||
+          s.lng < mapBounds.west ||
+          s.lng > mapBounds.east
+        ) return false;
+      }
+      return true;
+    });
+  }, [mapSightings, mapSeverityFilter, mapTimeRange, mapBoundsActive, mapBounds]);
+
+  // re-fit map when filters change (skip initial mount)
+  useEffect(() => {
+    if (!mapFilterMountedRef.current) { mapFilterMountedRef.current = true; return; }
+    setMapFitKey((k) => k + 1);
+  }, [mapSeverityFilter, mapTimeRange]);
+
+  // re-fit map when navigating to the live-map view
+  useEffect(() => {
+    if (activeView === "live-map") {
+      setMapFitKey((k) => k + 1);
+    }
+  }, [activeView]);
 
   // restore recent sightings from localStorage on mount
   useEffect(() => {
@@ -614,7 +719,12 @@ export default function RangerDashboard() {
         items: [
           { name: "Ranger Dispatch", icon: <Icons.Dispatch />, active: false },
           { name: "Reports", icon: <Icons.Report />, active: false },
-          { name: "Agent Logs", icon: <Icons.Logs />, active: false },
+          {
+            name: "Agent Logs",
+            icon: <Icons.Logs />,
+            active: activeView === "agent-logs",
+            onSelect: () => setActiveView("agent-logs"),
+          },
         ],
       },
     ];
@@ -667,17 +777,21 @@ export default function RangerDashboard() {
         } catch { /* ignore */ }
       }
 
-      setMapSightings((prev) =>
-        [
-          {
-            lat,
-            lng,
-            level: threatToMapLevel(threatLevel),
-            label: species,
-          },
-          ...prev,
-        ].slice(0, 40)
-      );
+      setMapSightings((prev) => {
+        const withoutSameBase = prev.filter((s) => mapSightingBaseId(s) !== rowId);
+        const next: MapSighting = {
+          id: `live-${rowId}`,
+          lat,
+          lng,
+          level: threatToMapLevel(threatLevel),
+          label: species,
+          timestamp: now,
+        };
+        const merged = [next, ...withoutSameBase].sort(
+          (a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0)
+        );
+        return trimSightingsPreferLive(merged, 500);
+      });
 
       setAgentPipeline((prev) =>
         prev.map((p) =>
@@ -776,6 +890,85 @@ export default function RangerDashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  // hydrate map sightings from history when time range filter changes
+  useEffect(() => {
+    const currentId = ++mapHistoryRequestIdRef.current;
+    let cancelled = false;
+    setMapHistoryLoaded(false);
+    setMapHistoryError(null);
+
+    (async () => {
+      try {
+        const params = new URLSearchParams();
+        if (mapTimeRange !== "all") {
+          const rangeMs: Record<string, number> = {
+            "1h":  1 * 60 * 60_000,
+            "6h":  6 * 60 * 60_000,
+            "24h": 24 * 60 * 60_000,
+            "7d":  7 * 24 * 60 * 60_000,
+          };
+          params.set("from", new Date(Date.now() - rangeMs[mapTimeRange]).toISOString());
+        }
+        const res = await fetch(`/api/alerts/history?${params.toString()}`);
+        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
+
+        if (!res.ok) {
+          if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+            setMapHistoryError(`Failed to load sightings (${res.status})`);
+          }
+          return;
+        }
+
+        let data: { alerts?: Record<string, unknown>[] };
+        try {
+          data = (await res.json()) as { alerts?: Record<string, unknown>[] };
+        } catch (e) {
+          if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+            setMapHistoryError(e instanceof Error ? e.message : "Invalid response");
+          }
+          return;
+        }
+
+        if (cancelled || currentId !== mapHistoryRequestIdRef.current) return;
+
+        const fetched: MapSighting[] = [];
+        for (const a of data.alerts ?? []) {
+          if (typeof a.alertId !== "string") continue;
+          if (typeof a.lat !== "number" || typeof a.lng !== "number") continue;
+          const rawDate = a.dispatchedAt ?? a.receivedAt;
+          const ts = rawDate ? new Date(rawDate as string) : null;
+          const validTs =
+            ts && !Number.isNaN(ts.getTime()) ? ts : undefined;
+          fetched.push({
+            id: a.alertId,
+            lat: a.lat,
+            lng: a.lng,
+            level: threatToMapLevel(typeof a.threatLevel === "string" ? a.threatLevel : "INFO"),
+            label: typeof a.species === "string" ? a.species : undefined,
+            timestamp: validTs,
+          });
+        }
+
+        setMapSightings((prev) => mergeHistoryAndLiveSightings(fetched, prev));
+
+        if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+          setMapHistoryError(null);
+          setMapHistoryLoaded(true);
+          setMapFitKey((k) => k + 1);
+        }
+      } catch (e) {
+        if (!cancelled && currentId === mapHistoryRequestIdRef.current) {
+          setMapHistoryError(e instanceof Error ? e.message : String(e));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      mapHistoryRequestIdRef.current += 1;
+    };
+  }, [mapTimeRange]);
+
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -816,11 +1009,6 @@ export default function RangerDashboard() {
   }, []);
 
   useEffect(() => {
-    let closed = false;
-    let es: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let attempt = 0;
-
     const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     const applyAgentUpdate = (agentId: string, agentStatus: string, message: string | null) => {
@@ -839,68 +1027,35 @@ export default function RangerDashboard() {
       debounceTimers.set(agentId, timer);
     };
 
-    const connect = () => {
-      if (closed) return;
-      es?.close();
-      es = new EventSource("/api/agent-status");
-      es.onmessage = (ev: MessageEvent) => {
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(ev.data) as Record<string, unknown>;
-        } catch {
-          return;
-        }
-        attempt = 0;
+    const unsub = subscribeAgentStatus((msg) => {
+      if (msg.type === "init" && msg.state && typeof msg.state === "object") {
+        const s = msg.state as Record<string, { status: string; logs: string[] }>;
+        setAgentPipeline((prev) =>
+          prev.map((p) => {
+            const a = s[p.agentId];
+            if (!a) return p;
+            const lastLog = a.logs.at(-1) ?? null;
+            const lastMsg = lastLog ? lastLog.replace(/^\[[^\]]+\]\s*/, "") : null;
+            return { ...p, status: agentStatusLabel(a.status, lastMsg), color: agentStatusColor(a.status) };
+          })
+        );
+        return;
+      }
 
-        if (msg.type === "unavailable") return;
+      if (typeof msg.agent === "string" && typeof msg.status === "string") {
+        const agentId = msg.agent;
+        const agentStatus = msg.status;
+        const message = typeof msg.message === "string" ? msg.message : null;
+        applyAgentUpdate(agentId, agentStatus, message);
+      }
+    });
 
-        if (msg.type === "paused" && typeof msg.paused === "boolean") {
-          setPaused(msg.paused);
-          return;
-        }
-
-        if (msg.type === "init" && msg.state && typeof msg.state === "object") {
-          const s = msg.state as Record<string, { status: string; logs: string[] }>;
-          setAgentPipeline((prev) =>
-            prev.map((p) => {
-              const a = s[p.agentId];
-              if (!a) return p;
-              const lastLog = a.logs.at(-1) ?? null;
-              const lastMsg = lastLog ? lastLog.replace(/^\[[^\]]+\]\s*/, "") : null;
-              return { ...p, status: agentStatusLabel(a.status, lastMsg), color: agentStatusColor(a.status) };
-            })
-          );
-          if (typeof msg.paused === "boolean") setPaused(msg.paused);
-          return;
-        }
-
-        // per-agent update: { agent, message, status, count, timestamp }
-        if (typeof msg.agent === "string" && typeof msg.status === "string") {
-          const agentId = msg.agent;
-          const agentStatus = msg.status;
-          const message = typeof msg.message === "string" ? msg.message : null;
-          applyAgentUpdate(agentId, agentStatus, message);
-        }
-      };
-      es.onerror = () => {
-        es?.close();
-        es = null;
-        if (closed) return;
-        attempt += 1;
-        const delay = Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5));
-        reconnectTimer = setTimeout(connect, delay);
-      };
-    };
-
-    connect();
     return () => {
-      closed = true;
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      unsub();
       for (const t of debounceTimers.values()) clearTimeout(t);
       debounceTimers.clear();
-      es?.close();
     };
-  }, []);
+  }, [subscribeAgentStatus]);
 
   if (breakpoint === null) {
     return (
@@ -919,7 +1074,12 @@ export default function RangerDashboard() {
 
   const isMobile = breakpoint === "mobile";
   const isDesktop = breakpoint === "desktop";
-  const pageTitle = activeView === "live-map" ? "Live Map" : "Dashboard";
+  const pageTitle =
+    activeView === "live-map"
+      ? "Live Map"
+      : activeView === "agent-logs"
+        ? "Agent logs"
+        : "Dashboard";
 
   return (
     <div className="flex h-screen flex-col bg-ranger-bg font-sans">
@@ -976,7 +1136,7 @@ export default function RangerDashboard() {
                 {agentPipeline.map((agent) => (
                   <div
                     key={agent.name}
-                    className="flex items-center gap-2 rounded-full border border-ranger-border bg-ranger-bg px-3 py-1.5"
+                    className="group relative flex items-center gap-2 rounded-full border border-ranger-border bg-ranger-bg px-3 py-1.5"
                   >
                     <span
                       className="h-2 w-2 rounded-full"
@@ -984,6 +1144,9 @@ export default function RangerDashboard() {
                     />
                     <span className="text-xs text-ranger-muted">{agent.name}</span>
                     <span className="text-xs font-medium text-ranger-text">{agent.status}</span>
+                    <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded border border-ranger-border bg-ranger-card px-2 py-1 text-xs text-ranger-text shadow-md group-hover:visible">
+                      {agent.name} — {agent.status}
+                    </span>
                   </div>
                 ))}
                 {paused && (
@@ -993,16 +1156,7 @@ export default function RangerDashboard() {
                   </div>
                 )}
               </div>
-              <div
-                className="flex shrink-0 items-center gap-2"
-                title={
-                  streamError
-                    ? streamError
-                    : streamLive
-                      ? "Connected to /api/alerts stream"
-                      : "Waiting for alert stream"
-                }
-              >
+              <div className="group relative flex shrink-0 items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     streamLive ? "animate-pulse-live bg-ranger-moss" : "bg-ranger-muted"
@@ -1020,19 +1174,149 @@ export default function RangerDashboard() {
                     {streamError}
                   </span>
                 ) : null}
+                <span className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-2 max-w-[260px] whitespace-nowrap rounded border border-ranger-border bg-ranger-card px-2 py-1 text-xs text-ranger-text shadow-md group-hover:visible">
+                  {streamError ? streamError : streamLive ? "Connected to /api/alerts stream" : "Waiting for alert stream"}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Main Content Area */}
           <main className="p-4 md:p-6">
-            {activeView === "live-map" ? (
+            {activeView === "agent-logs" ? (
+              <AgentLogsPanel />
+            ) : activeView === "live-map" ? (
               <div>
-                <p className="mb-4 text-sm text-ranger-muted">
-                  Severity-coded markers from the alert stream and demo sightings. Critical, warning,
-                  and info levels match pipeline threat scores.
-                </p>
-                <LiveMap sightings={mapSightings} />
+                {/* Filter toolbar */}
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  {/* Severity toggles */}
+                  <div className="flex items-center gap-1">
+                    {(["CRITICAL", "WARNING", "INFO"] as const).map((lvl) => {
+                      const active = mapSeverityFilter.has(lvl);
+                      const colors = { CRITICAL: "#c85a3a", WARNING: "#d4820a", INFO: "#4a7c5a" };
+                      return (
+                        <button
+                          key={lvl}
+                          onClick={() =>
+                            setMapSeverityFilter((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(lvl)) { next.delete(lvl); } else { next.add(lvl); }
+                              return next;
+                            })
+                          }
+                          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? "border-transparent text-ranger-text"
+                              : "border-ranger-border text-ranger-muted opacity-50"
+                          }`}
+                          style={active ? { backgroundColor: `${colors[lvl]}33`, borderColor: colors[lvl] } : {}}
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: colors[lvl], opacity: active ? 1 : 0.4 }}
+                          />
+                          {lvl}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="h-4 w-px bg-ranger-border" />
+
+                  {/* Time range presets */}
+                  <div className="flex items-center gap-1">
+                    {(["1h", "6h", "24h", "7d", "all"] as const).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => setMapTimeRange(range)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                          mapTimeRange === range
+                            ? "bg-ranger-border text-ranger-text"
+                            : "text-ranger-muted hover:text-ranger-text"
+                        }`}
+                      >
+                        {range === "all" ? "All time" : range}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="h-4 w-px bg-ranger-border" />
+
+                  {/* Area filter toggle */}
+                  <button
+                    onClick={() => setMapBoundsActive((v) => !v)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                      mapBoundsActive
+                        ? "border-ranger-moss/60 bg-ranger-moss/10 text-ranger-moss"
+                        : "border-ranger-border text-ranger-muted hover:text-ranger-text"
+                    }`}
+                    title="Only show sightings within the current map viewport"
+                  >
+                    <Icons.Map />
+                    Within view
+                  </button>
+
+                  {/* Count */}
+                  <span className="ml-auto text-xs text-ranger-muted">
+                    {filteredMapSightings.length} sighting{filteredMapSightings.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {mapHistoryError ? (
+                  <div className="flex h-[min(70vh,560px)] w-full flex-col items-center justify-center gap-2 rounded-xl border border-ranger-border bg-ranger-card px-6 text-center">
+                    <span className="text-sm font-medium text-ranger-apricot">Could not load map history</span>
+                    <span className="text-xs text-ranger-muted">{mapHistoryError}</span>
+                  </div>
+                ) : !mapHistoryLoaded ? (
+                  <div className="flex h-[min(70vh,560px)] w-full items-center justify-center rounded-xl border border-ranger-border bg-ranger-card">
+                    <span className="text-sm text-ranger-muted">Loading sightings…</span>
+                  </div>
+                ) : mapSightings.length === 0 ? (
+                  <div className="flex h-[min(70vh,560px)] w-full flex-col items-center justify-center gap-2 rounded-xl border border-ranger-border bg-ranger-card">
+                    <span className="text-sm font-medium text-ranger-text">No sightings found</span>
+                    <span className="text-xs text-ranger-muted">No alert data yet — run the seed script or trigger the pipeline.</span>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <LiveMap
+                      sightings={filteredMapSightings}
+                      onBoundsChange={setMapBounds}
+                      fitKey={mapFitKey}
+                    />
+                    {filteredMapSightings.length === 0 && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="pointer-events-auto rounded-xl border border-ranger-border bg-ranger-card/95 px-5 py-4 text-center shadow-lg backdrop-blur-sm">
+                          <p className="text-sm font-medium text-ranger-text">No sightings in this area</p>
+                          <p className="mt-1 text-xs text-ranger-muted">
+                            {mapBoundsActive
+                              ? "No pins fall within the current map view."
+                              : "No sightings match the current filters."}
+                          </p>
+                          <div className="mt-3 flex justify-center gap-2">
+                            {mapBoundsActive && (
+                              <button
+                                onClick={() => setMapBoundsActive(false)}
+                                className="rounded-lg border border-ranger-border px-3 py-1.5 text-xs text-ranger-text hover:bg-ranger-border/40"
+                              >
+                                Clear area filter
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setMapSeverityFilter(new Set(["CRITICAL", "WARNING", "INFO"]));
+                                setMapTimeRange("all");
+                                setMapBoundsActive(false);
+                              }}
+                              className="rounded-lg border border-ranger-border px-3 py-1.5 text-xs text-ranger-text hover:bg-ranger-border/40"
+                            >
+                              Reset all filters
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <>

@@ -26,7 +26,12 @@ const config: Config = {
         "ranger-moss": "#4a7c5a",
         "ranger-apricot": "#B86F0A",
         "ranger-spice": "#A84E2A",
-        "ranger-footer": "#DEDAD2"
+        "ranger-footer": "#DEDAD2",
+        // pipeline / data accents (agent logs, vision stream)
+        "ranger-sky": "#3d7eb8",
+        "ranger-sky-deep": "#2a6aaa",
+        "ranger-sky-soft": "#5a9fd4",
+        "ranger-amethyst": "#6b5a8a"
       }
     }
   },
