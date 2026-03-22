@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export interface CoOccurrencePair {
   species1: string;
@@ -33,33 +33,48 @@ export function useCoOccurrence({ hours = 24 }: UseCoOccurrenceParams = {}): Use
   const [data, setData] = useState<CoOccurrenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  const doFetch = useCallback(async (h: number) => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({ hours: String(h) });
+      const res = await fetch(`/api/wildlife/co-occurrence?${params}`, {
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error("co-occurrence fetch failed");
+      const json = (await res.json()) as CoOccurrenceResponse;
+      setData(json);
+      setError(false);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setError(true);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
+    doFetch(hours);
+    return () => controllerRef.current?.abort();
+  }, [hours, doFetch]);
 
-    const doFetch = async () => {
+  // re-fetch when new alerts arrive via SSE
+  useEffect(() => {
+    const es = new EventSource("/api/alerts");
+    const onMessage = (ev: MessageEvent) => {
       try {
-        const params = new URLSearchParams({ hours: String(hours) });
-        const res = await fetch(`/api/wildlife/co-occurrence?${params}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error("co-occurrence fetch failed");
-        const json = (await res.json()) as CoOccurrenceResponse;
-        setData(json);
-        setError(false);
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") return;
-        setError(true);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
+        const msg = JSON.parse(ev.data) as { type?: string };
+        if (msg.type === "alert") doFetch(hours);
+      } catch { /* ignore parse errors */ }
     };
-
-    setLoading(true);
-    doFetch();
-
-    return () => controller.abort();
-  }, [hours]);
+    es.addEventListener("message", onMessage);
+    return () => { es.close(); };
+  }, [hours, doFetch]);
 
   return {
     pairs: data?.pairs ?? [],

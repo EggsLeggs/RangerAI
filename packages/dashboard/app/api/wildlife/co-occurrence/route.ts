@@ -1,3 +1,5 @@
+import { zoneIdFromCoords } from "../../../../lib/sighting-helpers";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -10,13 +12,14 @@ function getQueue(): { alert: FlatAlert; receivedAt: string }[] {
   return g.__rangerAlertQueue ?? [];
 }
 
-function zoneId(lat: number, lng: number): string {
-  return "ZN-" + String(Math.abs(Math.floor(lat * 10 + lng * 10)) % 99).padStart(2, "0");
-}
+const MIN_HOURS = 1;
+const MAX_HOURS = 720; // 30 days
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const hours = parseInt(searchParams.get("hours") ?? "24", 10);
+  let hours = parseInt(searchParams.get("hours") ?? "24", 10);
+  if (!Number.isFinite(hours) || hours <= 0) hours = 24;
+  hours = Math.max(MIN_HOURS, Math.min(MAX_HOURS, hours));
   const cutoff = Date.now() - hours * 60 * 60 * 1000;
 
   let alerts: FlatAlert[] = [];
@@ -54,11 +57,11 @@ export async function GET(request: Request) {
     const lng = typeof a["lng"] === "number" ? a["lng"] : null;
     const species = typeof a["species"] === "string" ? a["species"] : null;
     const raw = a["dispatchedAt"] ?? a["receivedAt"] ?? a["timestamp"];
-    if (!lat || !lng || !species || !raw) continue;
+    if (lat === null || lng === null || species === null || raw == null) continue;
     const t = new Date(raw as string).getTime();
     if (isNaN(t)) continue;
     const hourBucket = Math.floor(t / (60 * 60 * 1000));
-    const zone = zoneId(lat, lng);
+    const zone = zoneIdFromCoords(lat, lng);
     const key = `${zone}:${hourBucket}`;
     if (!bins.has(key)) bins.set(key, { species: new Set(), zone });
     bins.get(key)!.species.add(species);

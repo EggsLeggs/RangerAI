@@ -1,13 +1,7 @@
 "use client";
 
 import type { TimelineSighting } from "../../hooks/use-wildlife-timeline";
-
-const THREAT_COLORS: Record<string, string> = {
-  CRITICAL: "#A84E2A",
-  WARNING: "#B86F0A",
-  INFO: "#4a7c5a",
-  NEEDS_REVIEW: "#9A9790",
-};
+import { THREAT_COLORS } from "../../lib/iucn-utils";
 
 export function TimelineScrubber({
   sightings,

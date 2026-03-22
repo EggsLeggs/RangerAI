@@ -5,16 +5,18 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MovementSighting } from "../../hooks/use-animal-movement";
 
-type Severity = "CRITICAL" | "WARNING" | "INFO";
+type Severity = "CRITICAL" | "WARNING" | "INFO" | "NEEDS_REVIEW";
 
 const SEVERITY_COLOR: Record<Severity, string> = {
   CRITICAL: "#c85a3a",
   WARNING: "#d4820a",
   INFO: "#4a7c5a",
+  NEEDS_REVIEW: "#b8a038",
 };
 
 function severityColor(tl: string): string {
-  if (tl === "CRITICAL" || tl === "WARNING" || tl === "INFO") return SEVERITY_COLOR[tl];
+  if (tl === "CRITICAL" || tl === "WARNING" || tl === "INFO" || tl === "NEEDS_REVIEW")
+    return SEVERITY_COLOR[tl];
   return SEVERITY_COLOR.INFO;
 }
 

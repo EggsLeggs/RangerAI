@@ -3,19 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3Force from "d3-force";
 import type { CoOccurrencePair, CoOccurrenceNode } from "../../hooks/use-co-occurrence";
-
-const IUCN_COLORS: Record<string, string> = {
-  CR: "#A84E2A",
-  EN: "#B86F0A",
-  VU: "#d4820a",
-  LC: "#4a7c5a",
-  NT: "#4a7c5a",
-};
-
-function iucnColor(status: string | null): string {
-  if (!status) return "#9A9790";
-  return IUCN_COLORS[status] ?? "#9A9790";
-}
+import { iucnColor } from "../../lib/iucn-utils";
 
 function nodeRadius(totalSightings: number): number {
   return Math.max(10, Math.min(28, 8 + Math.sqrt(totalSightings) * 2.5));
@@ -205,7 +193,7 @@ export function CoOccurrenceGraph({
         n.fy = Math.max(30, Math.min(h - 30, e.clientY - rect.top));
       });
 
-      g.addEventListener("pointerup", () => {
+      const cleanupDrag = (e?: PointerEvent) => {
         if (dragging !== n) return;
         dragging = null;
         n.vx = 0;
@@ -214,7 +202,14 @@ export function CoOccurrenceGraph({
         n.fy = null;
         g.style.cursor = "grab";
         simRef.current?.alphaTarget(0);
-      });
+        if (e) {
+          try { g.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+        }
+      };
+
+      g.addEventListener("pointerup", (e) => cleanupDrag(e));
+      g.addEventListener("pointercancel", (e) => cleanupDrag(e));
+      g.addEventListener("lostpointercapture", (e) => cleanupDrag(e));
 
       return { g, circle, id: n.id };
     });

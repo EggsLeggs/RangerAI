@@ -40,6 +40,7 @@ export function useAnimalMovement({ species }: UseAnimalMovementParams): UseAnim
     }
 
     const controller = new AbortController();
+    setData(null);
 
     const doFetch = async () => {
       try {
@@ -52,6 +53,7 @@ export function useAnimalMovement({ species }: UseAnimalMovementParams): UseAnim
         setError(false);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        setData(null);
         setError(true);
       } finally {
         if (!controller.signal.aborted) setLoading(false);

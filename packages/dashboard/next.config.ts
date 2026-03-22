@@ -25,8 +25,14 @@ try {
 }
 
 const nextConfig: NextConfig = {
-  // workspace package ships TypeScript sources; Next must compile them
   transpilePackages: ["@rangerai/shared"],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "inaturalist-open-data.s3.amazonaws.com" },
+      { protocol: "https", hostname: "static.inaturalist.org" },
+      { protocol: "https", hostname: "**.inaturalist.org" },
+    ],
+  },
 };
 
 export default nextConfig;

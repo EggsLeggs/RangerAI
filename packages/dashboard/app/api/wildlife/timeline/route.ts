@@ -14,8 +14,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
-  const fromDate = fromStr ? new Date(fromStr) : null;
-  const toDate = toStr ? new Date(toStr) : null;
+  const fromParsed = fromStr ? new Date(fromStr) : null;
+  const toParsed = toStr ? new Date(toStr) : null;
+  const fromDate = fromParsed && !isNaN(fromParsed.getTime()) ? fromParsed : null;
+  const toDate = toParsed && !isNaN(toParsed.getTime()) ? toParsed : null;
+
+  if ((fromStr && !fromDate) || (toStr && !toDate)) {
+    return Response.json({ error: "Invalid date parameter" }, { status: 400 });
+  }
 
   let alerts: FlatAlert[] = [];
 
@@ -31,8 +37,8 @@ export async function GET(request: Request) {
     }
     const raw = await col.find(filter).sort({ dispatchedAt: 1 }).limit(5000).toArray();
     alerts = raw as FlatAlert[];
-  } catch {
-    // fall back to queue
+  } catch (err) {
+    console.error("Failed to query timeline DB, falling back to queue:", err);
   }
 
   if (alerts.length === 0) {

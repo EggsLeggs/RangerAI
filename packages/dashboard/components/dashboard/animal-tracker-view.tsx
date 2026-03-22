@@ -17,18 +17,30 @@ export function AnimalTrackerView() {
   const [timeFrom, setTimeFrom] = useState<string | undefined>(undefined);
   const [timeTo, setTimeTo] = useState<string | undefined>(undefined);
 
-  const { sightings: timelineSightings, loading: timelineLoading } = useWildlifeTimeline({
+  const { sightings: timelineSightings, loading: timelineLoading, error: timelineError } = useWildlifeTimeline({
     from: timeFrom,
     to: timeTo,
   });
 
-  const { sightings: movementSightings, loading: movementLoading } = useAnimalMovement({
+  const { sightings: movementSightings, loading: movementLoading, error: movementError } = useAnimalMovement({
     species: selectedSpecies,
   });
 
   function handleRangeChange(from: string, to: string) {
     setTimeFrom(from || undefined);
     setTimeTo(to || undefined);
+  }
+
+  if (timelineError || movementError) {
+    return (
+      <div className="space-y-4">
+        <div className="flex h-48 items-center justify-center rounded-xl border border-ranger-border bg-ranger-card">
+          <p className="text-sm text-ranger-apricot">
+            Failed to load {timelineError && movementError ? "timeline and movement" : timelineError ? "timeline" : "movement"} data. Try refreshing.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -66,6 +78,7 @@ export function AnimalTrackerView() {
                   <button
                     onClick={() => setSelectedSpecies(null)}
                     className="ml-2 text-ranger-muted hover:text-ranger-text"
+                    aria-label="Close species tracker"
                   >
                     ✕
                   </button>

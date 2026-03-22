@@ -1,3 +1,5 @@
+import { zoneIdFromCoords } from "../../../../lib/sighting-helpers";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -8,10 +10,6 @@ function getQueue(): { alert: FlatAlert; receivedAt: string }[] {
     __rangerAlertQueue?: { alert: FlatAlert; receivedAt: string }[];
   };
   return g.__rangerAlertQueue ?? [];
-}
-
-function zoneId(lat: number, lng: number): string {
-  return "ZN-" + String(Math.abs(Math.floor(lat * 10 + lng * 10)) % 99).padStart(2, "0");
 }
 
 export async function GET(request: Request) {
@@ -63,7 +61,7 @@ export async function GET(request: Request) {
         lat,
         lng,
         timestamp: ts,
-        zone: zoneId(lat, lng),
+        zone: zoneIdFromCoords(lat, lng),
         threatLevel: typeof a["threatLevel"] === "string" ? a["threatLevel"] : "INFO",
         inRange: typeof a["inRange"] === "boolean" ? a["inRange"] : true,
         alertId: typeof a["alertId"] === "string" ? a["alertId"] : null,

@@ -1,29 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { Card } from "../ui/card";
 import type { SpeciesIndexEntry } from "../../hooks/use-species-index";
 import { formatRelativeTime } from "../../lib/sighting-helpers";
-
-const IUCN_COLORS: Record<string, string> = {
-  CR: "#A84E2A",
-  EN: "#B86F0A",
-  VU: "#d4820a",
-  LC: "#4a7c5a",
-  NT: "#4a7c5a",
-  DD: "#9A9790",
-};
-
-function iucnColor(status: string | null): string {
-  if (!status) return "#9A9790";
-  return IUCN_COLORS[status] ?? "#9A9790";
-}
-
-const THREAT_COLORS: Record<string, string> = {
-  CRITICAL: "#A84E2A",
-  WARNING: "#B86F0A",
-  INFO: "#4a7c5a",
-  NEEDS_REVIEW: "#9A9790",
-};
+import { iucnColor, THREAT_COLORS } from "../../lib/iucn-utils";
 
 export function SpeciesCard({
   entry,
@@ -50,9 +31,11 @@ export function SpeciesCard({
     >
       <div className="flex items-start gap-3">
         {entry.imageUrl ? (
-          <img
+          <Image
             src={entry.imageUrl}
             alt={entry.name}
+            width={80}
+            height={80}
             className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
           />
         ) : (

@@ -47,7 +47,7 @@ export function RecentSightingsTable({
               const isDisabled = generatingAlertId !== null && !isGenerating;
               return (
               <tr
-                key={`${sighting.id}-${idx}`}
+                key={sighting.id}
                 role="button"
                 tabIndex={isDisabled ? -1 : 0}
                 aria-label={isGenerating ? `Generating report for ${sighting.species}` : `Open report for ${sighting.species}`}

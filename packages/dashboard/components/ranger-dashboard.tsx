@@ -188,20 +188,16 @@ export default function RangerDashboard() {
 
   const isMobile = breakpoint === "mobile";
   const isDesktop = breakpoint === "desktop";
-  const pageTitle =
-    activeView === "live-map"
-      ? "Live Map"
-      : activeView === "agent-logs"
-        ? "Agent logs"
-        : activeView === "reports"
-          ? "Reports"
-          : activeView === "wildlife-stats"
-            ? "Wildlife Stats"
-            : activeView === "species-index"
-              ? "Species Index"
-              : activeView === "animal-tracker"
-                ? "Animal Tracker"
-                : "Dashboard";
+  const PAGE_TITLES: Record<DashboardViewType, string> = {
+    "dashboard": "Dashboard",
+    "live-map": "Live Map",
+    "agent-logs": "Agent logs",
+    "reports": "Reports",
+    "wildlife-stats": "Wildlife Stats",
+    "species-index": "Species Index",
+    "animal-tracker": "Animal Tracker",
+  };
+  const pageTitle = PAGE_TITLES[activeView] ?? "Dashboard";
 
   return (
     <div className="flex h-screen flex-col bg-ranger-bg font-sans">
